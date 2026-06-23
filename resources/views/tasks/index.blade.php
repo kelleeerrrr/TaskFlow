@@ -91,12 +91,17 @@
                                         {{ optional($task->assignedUser)->name ?? 'Unassigned' }}
                                     </td>
                                     <td class="px-6 py-4">
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium
-                                            {{ $task->status === 'completed' ? 'bg-green-100 text-green-700' :
-                                            ($task->status === 'ongoing' ? 'bg-blue-100 text-blue-700' :
-                                            ($task->status === 'new' ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-gray-100 text-gray-700')) }}">
-                                            {{ ucfirst($task->status) }}
+                                        @php
+                                            $approvalStatusLabel = $task->approval_status === 'pending' ? 'Pending Approval' : ucfirst($task->status);
+                                            $approvalStatusClasses = $task->approval_status === 'pending'
+                                                ? 'bg-purple-100 text-purple-700'
+                                                : ($task->status === 'completed' ? 'bg-green-100 text-green-700'
+                                                : ($task->status === 'ongoing' ? 'bg-blue-100 text-blue-700'
+                                                : ($task->status === 'new' ? 'bg-yellow-100 text-yellow-700'
+                                                : 'bg-gray-100 text-gray-700')));
+                                        @endphp
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium {{ $approvalStatusClasses }}">
+                                            {{ $approvalStatusLabel }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4">
@@ -117,32 +122,38 @@
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-2">
-                                            @if($task->status !== 'completed')
-                                                <form action="{{ route('tasks.update', $task) }}" method="POST" class="inline">
-                                                    @csrf
-                                                    @method('PUT')
-                                                    <input type="hidden" name="status" value="completed">
-                                                    <button type="submit" class="p-1 text-green-600 hover:bg-green-50 rounded" title="Mark as Complete">
-                                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            @endif
-                                            <a href="{{ route('tasks.edit', $task) }}" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
-                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                </svg>
-                                            </a>
-                                            <form action="{{ route('tasks.destroy', $task) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this task?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
+                                            @if($task->approval_status === 'pending')
+                                                @if(auth()->user()->isManager() || auth()->user()->isSuperAdmin())
+                                                    <form action="{{ route('tasks.approve', $task) }}" method="POST" class="inline">
+                                                        @csrf
+                                                        <button type="submit" class="p-1 text-green-600 hover:bg-green-50 rounded" title="Approve Task">
+                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                    <form action="{{ route('tasks.reject', $task) }}" method="POST" class="inline">
+                                                        @csrf
+                                                        <button type="submit" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Reject Task">
+                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @elseif(in_array($task->status, ['new', 'ongoing']))
+                                                <a href="{{ route('tasks.edit', $task) }}" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                    </svg>
+                                                </a>
+                                            @elseif($task->status === 'completed')
+                                                <button type="button" onclick="openDeleteModal('{{ route('tasks.destroy', $task) }}')" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
                                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                     </svg>
                                                 </button>
-                                            </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -213,5 +224,32 @@
                 </div>
             </form>
         </div>
+        </div>
+    </div>
+
+    <div id="deleteTaskModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
+        <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-lg">
+            <h2 class="text-xl font-semibold text-gray-900">Confirm Delete</h2>
+            <p class="mt-4 text-gray-600">Are you really sure you want to delete this task? This action cannot be undone.</p>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+                <form id="deleteTaskForm" method="POST" class="inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button>
+                </form>
+            </div>
+        </div>
     </div>
 </x-app-layout>
+<script>
+    function openDeleteModal(actionUrl) {
+        const modal = document.getElementById('deleteTaskModal');
+        document.getElementById('deleteTaskForm').action = actionUrl;
+        modal.classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteTaskModal').classList.add('hidden');
+    }
+</script>

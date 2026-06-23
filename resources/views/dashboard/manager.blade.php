@@ -5,10 +5,14 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="grid gap-6 md:grid-cols-4 mb-6">
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
                 <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
                     <h3 class="text-lg font-semibold">Total Tasks</h3>
                     <p class="mt-4 text-3xl font-bold text-orange-600">{{ $stats['total_tasks'] }}</p>
+                </div>
+                <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
+                    <h3 class="text-lg font-semibold">Pending Tasks</h3>
+                    <p class="mt-4 text-3xl font-bold text-purple-600">{{ $stats['pending_tasks'] }}</p>
                 </div>
                 <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
                     <h3 class="text-lg font-semibold">New Tasks</h3>
@@ -21,6 +25,10 @@
                 <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
                     <h3 class="text-lg font-semibold">Completed Tasks</h3>
                     <p class="mt-4 text-3xl font-bold text-green-600">{{ $stats['completed_tasks'] }}</p>
+                </div>
+                <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
+                    <h3 class="text-lg font-semibold">Total Users</h3>
+                    <p class="mt-4 text-3xl font-bold text-gray-800">{{ $stats['total_users'] }}</p>
                 </div>
             </div>
 

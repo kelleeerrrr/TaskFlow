@@ -10,7 +10,7 @@
                 <p class="text-gray-600 mt-2">Here's what's happening with your tasks today.</p>
             </div>
 
-            <div class="grid gap-6 md:grid-cols-4 mb-8">
+            <div class="grid gap-6 md:grid-cols-3 mb-8">
                 <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
                     <div class="flex items-center justify-between">
                         <div>
@@ -20,6 +20,19 @@
                         <div class="bg-orange-500 p-3 rounded-lg">
                             <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm font-medium">Pending Approval</p>
+                            <p class="mt-2 text-3xl font-bold text-purple-600">{{ $stats['pending_approval'] }}</p>
+                        </div>
+                        <div class="bg-purple-500 p-3 rounded-lg">
+                            <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
                         </div>
                     </div>
@@ -85,12 +98,17 @@
                                         </p>
                                     </div>
                                     <div class="flex items-center gap-4">
-                                        <span class="px-3 py-1 rounded-full text-xs font-medium
-                                            {{ $task->status === 'completed' ? 'bg-green-100 text-green-700' :
-                                            ($task->status === 'ongoing' ? 'bg-blue-100 text-blue-700' :
-                                            ($task->status === 'new' ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-gray-100 text-gray-700')) }}">
-                                            {{ ucfirst($task->status) }}
+                                        @php
+                                            $statusLabel = $task->approval_status === 'pending' ? 'Pending Approval' : ucfirst($task->status);
+                                            $statusClasses = $task->approval_status === 'pending'
+                                                ? 'bg-purple-100 text-purple-700'
+                                                : ($task->status === 'completed' ? 'bg-green-100 text-green-700'
+                                                : ($task->status === 'ongoing' ? 'bg-blue-100 text-blue-700'
+                                                : ($task->status === 'new' ? 'bg-yellow-100 text-yellow-700'
+                                                : 'bg-gray-100 text-gray-700')));
+                                        @endphp
+                                        <span class="px-3 py-1 rounded-full text-xs font-medium {{ $statusClasses }}">
+                                            {{ $statusLabel }}
                                         </span>
                                         <span class="text-sm text-gray-500">
                                             {{ $task->due_date }}

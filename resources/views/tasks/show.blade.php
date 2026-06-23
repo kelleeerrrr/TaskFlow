@@ -75,7 +75,16 @@
                             </li>
                             @foreach($task->collaborators as $collaborator)
                                 <li class="flex items-center justify-between">
-                                    <span>{{ $collaborator->name }} <span class="text-sm text-gray-500">({{ ucfirst($collaborator->pivot->invitation_status) }})</span></span>
+                                    <span>
+                                        {{ $collaborator->name }}
+                                        <span class="text-sm text-gray-500">(
+                                            @if($collaborator->pivot->invitation_status === 'pending')
+                                                Pending Approval
+                                            @else
+                                                {{ ucfirst($collaborator->pivot->invitation_status) }}
+                                            @endif
+                                        )</span>
+                                    </span>
                                     @if(($collaborator->pivot->invitation_status === 'pending') && (auth()->user()->isSuperAdmin() || auth()->user()->isManager()))
                                         <div class="flex gap-2">
                                             <form action="{{ route('tasks.accept-invitation', $task) }}" method="POST">
@@ -93,6 +102,32 @@
                                 </li>
                             @endforeach
                         </ul>
+                    </div>
+                @endif
+
+                @if((auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->assigned_to === auth()->id()) && $task->approval_status === 'approved' && $task->status !== 'completed')
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <h3 class="font-semibold">Update Progress</h3>
+                        <form action="{{ route('tasks.update', $task) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
+                            @csrf
+                            @method('PUT')
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <select name="status" class="w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                                    <option value="new" {{ $task->status === 'new' ? 'selected' : '' }}>New</option>
+                                    <option value="ongoing" {{ $task->status === 'ongoing' ? 'selected' : '' }}>Ongoing</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">PDF Attachment</label>
+                                <input type="file" name="attachment" accept="application/pdf" class="w-full text-sm text-gray-700" />
+                                <p class="text-sm text-gray-500 mt-1">Upload a PDF up to 50 MB when completing a task.</p>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-orange-500 border border-transparent rounded-lg text-white hover:bg-orange-600 transition-all">Update Progress</button>
+                            </div>
+                        </form>
                     </div>
                 @endif
 
@@ -120,7 +155,7 @@
                             @csrf
                             <select name="user_id" required class="block w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-orange-500 focus:ring-orange-500">
                                 <option value="">Select a user</option>
-                                @foreach(\App\Models\User::where('id', '!=', auth()->id())->get() as $user)
+                                @foreach(\App\Models\User::where('id', '!=', auth()->id())->where('role', 'user')->get() as $user)
                                     <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
                                 @endforeach
                             </select>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\TaskCollaborator;
 use App\Models\TaskFile;
 use App\Models\TaskHistory;
 use App\Models\TaskNotification;
@@ -63,6 +64,22 @@ class TaskController extends Controller
         $tasks = $query->latest()->paginate(15)->appends($request->query());
 
         return view('tasks.index', compact('tasks', 'statusFilter', 'assignedFilter'));
+    }
+
+    public function collaborationRequests()
+    {
+        $user = auth()->user();
+
+        if (! ($user->isSuperAdmin() || $user->isManager())) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $requests = TaskCollaborator::with(['task.creator', 'user'])
+            ->where('invitation_status', 'pending')
+            ->latest()
+            ->get();
+
+        return view('collaborations.index', compact('requests'));
     }
 
     public function create()
@@ -299,7 +316,7 @@ class TaskController extends Controller
             abort(Response::HTTP_FORBIDDEN);
         }
 
-        $task->update(['approval_status' => 'approved']);
+        $task->update(['approval_status' => 'approved', 'status' => 'new']);
 
         TaskHistory::create([
             'task_id' => $task->id,
@@ -349,6 +366,10 @@ class TaskController extends Controller
 
         $collaborator = \App\Models\User::findOrFail($data['user_id']);
 
+        if ($collaborator->role !== 'user') {
+            return redirect()->route('tasks.show', $task)->with('error', 'Only regular users can be invited as collaborators.');
+        }
+
         if ($task->collaborators()->where('user_id', $collaborator->id)->exists()) {
             return redirect()->route('tasks.show', $task)->with('error', 'User is already a collaborator.');
         }
@@ -361,9 +382,14 @@ class TaskController extends Controller
             'user_id' => $user->id,
         ]);
 
-        $this->createNotification($collaborator, 'Invitation Received', "You have been invited to collaborate on task '{$task->title}'.");
+        $this->createNotification($collaborator, 'Collaboration Invitation', "You have been invited to collaborate on task '{$task->title}'. This invitation is pending admin approval.");
 
-        return redirect()->route('tasks.show', $task)->with('success', 'Collaborator invited successfully.');
+        $admins = \App\Models\User::whereIn('role', ['super_admin', 'manager'])->get();
+        foreach ($admins as $admin) {
+            $this->createNotification($admin, 'Collaboration Approval Needed', "A collaboration request for task '{$task->title}' is pending approval.");
+        }
+
+        return redirect()->route('tasks.show', $task)->with('success', 'Collaborator invited successfully and pending admin approval.');
     }
 
     public function acceptInvitation(Request $request, string $taskId)
@@ -381,7 +407,7 @@ class TaskController extends Controller
 
         $collaboration = $task->collaborators()->where('user_id', $data['user_id'])->first();
 
-        if (! $collaboration) {
+        if (! $collaboration || $collaboration->pivot->invitation_status !== 'pending') {
             abort(Response::HTTP_FORBIDDEN);
         }
 
@@ -418,7 +444,7 @@ class TaskController extends Controller
 
         $collaboration = $task->collaborators()->where('user_id', $data['user_id'])->first();
 
-        if (! $collaboration) {
+        if (! $collaboration || $collaboration->pivot->invitation_status !== 'pending') {
             abort(Response::HTTP_FORBIDDEN);
         }
 

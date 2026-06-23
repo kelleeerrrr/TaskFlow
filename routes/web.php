@@ -34,6 +34,8 @@ Route::middleware(['auth', 'active.account'])->group(function () {
             Route::get('/per-user', [ReportsController::class, 'perUserReport'])->name('per-user');
             Route::get('/user-registrations', [ReportsController::class, 'userRegistrations'])->name('user-registrations');
         });
+
+        Route::get('/collaborations', [TaskController::class, 'collaborationRequests'])->name('collaborations.index');
     });
 
     Route::resource('tasks', TaskController::class);

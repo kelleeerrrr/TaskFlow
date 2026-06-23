@@ -47,21 +47,22 @@ class DashboardController extends Controller
     {
         $stats = [
             'total_tasks' => Task::count(),
-            'new_tasks' => Task::where('status', 'new')->count(),
-            'ongoing_tasks' => Task::where('status', 'ongoing')->count(),
-            'completed_tasks' => Task::where('status', 'completed')->count(),
+            'pending_tasks' => Task::where('approval_status', 'pending')->count(),
+            'new_tasks' => Task::where('status', 'new')->where('approval_status', 'approved')->count(),
+            'ongoing_tasks' => Task::where('status', 'ongoing')->where('approval_status', 'approved')->count(),
+            'completed_tasks' => Task::where('status', 'completed')->where('approval_status', 'approved')->count(),
             'total_users' => User::count(),
         ];
 
         $taskCompletionRate = [
-            'completed' => Task::where('status', 'completed')->count(),
+            'completed' => Task::where('status', 'completed')->where('approval_status', 'approved')->count(),
             'total' => Task::count(),
         ];
 
         $tasksByStatus = [
-            'new' => Task::where('status', 'new')->count(),
-            'ongoing' => Task::where('status', 'ongoing')->count(),
-            'completed' => Task::where('status', 'completed')->count(),
+            'new' => Task::where('status', 'new')->where('approval_status', 'approved')->count(),
+            'ongoing' => Task::where('status', 'ongoing')->where('approval_status', 'approved')->count(),
+            'completed' => Task::where('status', 'completed')->where('approval_status', 'approved')->count(),
         ];
 
         return view('dashboard.manager', compact('user', 'stats', 'taskCompletionRate', 'tasksByStatus'));
@@ -69,20 +70,30 @@ class DashboardController extends Controller
 
     private function userDashboard($user)
     {
-        $myTasks = Task::where('created_by', $user->id)->count();
-        $newTasks = Task::where('created_by', $user->id)->where('status', 'new')->count();
-        $ongoingTasks = Task::where('created_by', $user->id)->where('status', 'ongoing')->count();
-        $completedTasks = Task::where('created_by', $user->id)->where('status', 'completed')->count();
+        $taskQuery = Task::where(function ($q) use ($user) {
+            $q->where('created_by', $user->id)
+                ->orWhere('assigned_to', $user->id)
+                ->orWhereHas('collaborators', function ($query) use ($user) {
+                    $query->where('user_id', $user->id)
+                          ->where('invitation_status', 'accepted');
+                });
+        });
 
-        $recentTasks = Task::with('assignedUser')
-            ->where('created_by', $user->id)
-            ->orWhere('assigned_to', $user->id)
+        $myTasks = (clone $taskQuery)->count();
+        $pendingApprovalTasks = Task::where('created_by', $user->id)->where('approval_status', 'pending')->count();
+        $newTasks = (clone $taskQuery)->where('status', 'new')->where('approval_status', 'approved')->count();
+        $ongoingTasks = (clone $taskQuery)->where('status', 'ongoing')->where('approval_status', 'approved')->count();
+        $completedTasks = (clone $taskQuery)->where('status', 'completed')->where('approval_status', 'approved')->count();
+
+        $recentTasks = (clone $taskQuery)
+            ->with('assignedUser')
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
 
         $stats = [
             'my_tasks' => $myTasks,
+            'pending_approval' => $pendingApprovalTasks,
             'new_tasks' => $newTasks,
             'ongoing_tasks' => $ongoingTasks,
             'completed_tasks' => $completedTasks,
