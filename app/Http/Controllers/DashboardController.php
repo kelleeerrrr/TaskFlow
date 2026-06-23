@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -30,12 +31,12 @@ class DashboardController extends Controller
             'total_tasks' => Task::count(),
         ];
 
-        $tasksPerMonth = Task::selectRaw('strftime("%Y-%m", created_at) as month, COUNT(*) as count')
+        $tasksPerMonth = Task::selectRaw("to_char(created_at, 'YYYY-MM') as month, COUNT(*) as count")
             ->groupBy('month')
             ->orderBy('month')
             ->get();
 
-        $userRegistrations = User::selectRaw('strftime("%Y-%m", created_at) as month, COUNT(*) as count')
+        $userRegistrations = User::selectRaw("to_char(created_at, 'YYYY-MM') as month, COUNT(*) as count")
             ->groupBy('month')
             ->orderBy('month')
             ->get();
