@@ -49,6 +49,7 @@ class DashboardController extends Controller
         $stats = [
             'total_tasks' => Task::count(),
             'pending_tasks' => Task::where('approval_status', 'pending')->count(),
+            'rejected_tasks' => Task::where('status', 'rejected')->count(),
             'new_tasks' => Task::where('status', 'new')->where('approval_status', 'approved')->count(),
             'ongoing_tasks' => Task::where('status', 'ongoing')->where('approval_status', 'approved')->count(),
             'completed_tasks' => Task::where('status', 'completed')->where('approval_status', 'approved')->count(),
@@ -84,6 +85,7 @@ class DashboardController extends Controller
         $pendingApprovalTasks = Task::where('created_by', $user->id)->where('approval_status', 'pending')->count();
         $newTasks = (clone $taskQuery)->where('status', 'new')->where('approval_status', 'approved')->count();
         $ongoingTasks = (clone $taskQuery)->where('status', 'ongoing')->where('approval_status', 'approved')->count();
+        $rejectedTasks = (clone $taskQuery)->where('status', 'rejected')->count();
         $completedTasks = (clone $taskQuery)->where('status', 'completed')->where('approval_status', 'approved')->count();
 
         $recentTasks = (clone $taskQuery)
@@ -98,6 +100,7 @@ class DashboardController extends Controller
             'new_tasks' => $newTasks,
             'ongoing_tasks' => $ongoingTasks,
             'completed_tasks' => $completedTasks,
+            'rejected_tasks' => $rejectedTasks,
         ];
 
         return view('dashboard.user', compact('user', 'stats', 'recentTasks'));

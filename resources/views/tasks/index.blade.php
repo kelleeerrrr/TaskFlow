@@ -93,7 +93,21 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-900">
-                                        {{ optional($task->assignedUser)->name ?? 'Unassigned' }}
+                                        @if($task->assignedUser)
+                                            <p>{{ $task->assignedUser->name }}</p>
+                                        @endif
+                                        @if($task->collaborators->isNotEmpty())
+                                            <div class="space-y-1 mt-1">
+                                                @foreach($task->collaborators as $collaborator)
+                                                    @if(!$task->assignedUser || $collaborator->id !== $task->assignedUser->id)
+                                                        <p>{{ $collaborator->name }}</p>
+                                                    @endif
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                        @if(!$task->assignedUser && $task->collaborators->isEmpty())
+                                            <p>Unassigned</p>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4">
                                         @php
@@ -103,7 +117,8 @@
                                                 : ($task->status === 'completed' ? 'bg-green-100 text-green-700'
                                                 : ($task->status === 'ongoing' ? 'bg-blue-100 text-blue-700'
                                                 : ($task->status === 'new' ? 'bg-yellow-100 text-yellow-700'
-                                                : 'bg-gray-100 text-gray-700')));
+                                                : ($task->status === 'rejected' ? 'bg-red-100 text-red-700'
+                                                : 'bg-gray-100 text-gray-700'))));
                                         @endphp
                                         <span class="px-2 py-1 rounded-full text-xs font-medium {{ $approvalStatusClasses }}">
                                             {{ $approvalStatusLabel }}

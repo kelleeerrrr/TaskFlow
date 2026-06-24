@@ -5,7 +5,7 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
                 <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
                     <h3 class="text-lg font-semibold">Total Tasks</h3>
                     <p class="mt-4 text-3xl font-bold text-orange-600">{{ $stats['total_tasks'] }}</p>
@@ -13,6 +13,10 @@
                 <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
                     <h3 class="text-lg font-semibold">Pending Tasks</h3>
                     <p class="mt-4 text-3xl font-bold text-purple-600">{{ $stats['pending_tasks'] }}</p>
+                </div>
+                <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
+                    <h3 class="text-lg font-semibold">Rejected Tasks</h3>
+                    <p class="mt-4 text-3xl font-bold text-red-600">{{ $stats['rejected_tasks'] }}</p>
                 </div>
                 <div class="p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
                     <h3 class="text-lg font-semibold">New Tasks</h3>

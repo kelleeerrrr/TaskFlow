@@ -5,11 +5,9 @@
 
     <div class="py-12">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            @if($task->approval_status === 'approved' && $task->status === 'new')
+            @if($task->approval_status === 'approved' && $task->status === 'new' && auth()->user()->isUser())
                 @php
-                    $canStartTask = auth()->user()->isSuperAdmin()
-                        || auth()->user()->isManager()
-                        || $task->assigned_to === auth()->id()
+                    $canStartTask = $task->assigned_to === auth()->id()
                         || $task->created_by === auth()->id()
                         || $task->collaborators()->where('user_id', auth()->id())->where('invitation_status', 'accepted')->exists();
                 @endphp
@@ -69,7 +67,21 @@
                     </div>
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="font-medium">Assigned To</p>
-                        <p>{{ optional($task->assignedUser)->name ?? 'Unassigned' }}</p>
+                        @if($task->assignedUser)
+                            <p>{{ $task->assignedUser->name }}</p>
+                        @endif
+                        @if($task->collaborators->isNotEmpty())
+                            <div class="space-y-1 mt-1">
+                                @foreach($task->collaborators as $collaborator)
+                                    @if(!$task->assignedUser || $collaborator->id !== $task->assignedUser->id)
+                                        <p>{{ $collaborator->name }}</p>
+                                    @endif
+                                @endforeach
+                            </div>
+                        @endif
+                        @if(!$task->assignedUser && $task->collaborators->isEmpty())
+                            <p>Unassigned</p>
+                        @endif
                     </div>
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="font-medium">Date Created</p>
@@ -163,6 +175,33 @@
                             </div>
                         </form>
                     </div>
+                @endif
+
+                @if(auth()->user()->isUser() && $task->approval_status === 'approved' && $task->status === 'ongoing')
+                    @php
+                        $canCompleteTask = $task->assigned_to === auth()->id()
+                            || $task->created_by === auth()->id()
+                            || $task->collaborators()->where('user_id', auth()->id())->where('invitation_status', 'accepted')->exists();
+                    @endphp
+                    @if($canCompleteTask)
+                        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                            <h3 class="font-semibold mb-3">Complete Task</h3>
+                            <p class="mt-2 text-sm text-gray-600">Upload a PDF file (max 50MB) to mark this task as completed.</p>
+                            <form action="{{ route('tasks.update', $task) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="status" value="completed">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">PDF Attachment (Required)</label>
+                                    <input type="file" name="attachment" accept="application/pdf" class="w-full text-sm text-gray-700" required />
+                                    <p class="text-sm text-gray-500 mt-1">Upload a PDF up to 50 MB to complete the task.</p>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-green-500 border border-transparent rounded-lg text-white hover:bg-green-600 transition-all">Complete Task</button>
+                                </div>
+                            </form>
+                        </div>
+                    @endif
                 @endif
 
                 @if($task->history->isNotEmpty())

@@ -119,7 +119,7 @@ class TaskController extends Controller
             'title' => $data['title'],
             'description' => $data['description'],
             'created_by' => $user->id,
-            'assigned_to' => count($assignedUsers) ? $assignedUsers[0] : null,
+            'assigned_to' => count($assignedUsers) ? $assignedUsers[0] : ($user->isUser() ? $user->id : null),
             'status' => 'new',
             'priority' => $data['priority'] ?? 'medium',
             'due_date' => $data['due_date'],
@@ -422,7 +422,7 @@ class TaskController extends Controller
             abort(Response::HTTP_FORBIDDEN);
         }
 
-        $task->update(['approval_status' => 'rejected']);
+        $task->update(['approval_status' => 'rejected', 'status' => 'rejected']);
 
         TaskHistory::create([
             'task_id' => $task->id,
