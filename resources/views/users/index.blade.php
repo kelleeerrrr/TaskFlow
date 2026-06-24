@@ -17,14 +17,25 @@
                 <div class="mb-6 p-4 bg-green-100 text-green-800 rounded-lg">{{ session('success') }}</div>
             @endif
 
-            <!-- Search -->
+            <!-- Search and Filter -->
             <div class="bg-white rounded-xl shadow-lg p-4 mb-6 border border-gray-200">
-                <div class="relative">
-                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    <input type="text" placeholder="Search users..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                </div>
+                <form method="GET" action="{{ route('users.index') }}" id="userFilterForm">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1 relative">
+                            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search users..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                        </div>
+                        <select name="status" onchange="document.getElementById('userFilterForm').submit()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                            <option value="">All Status</option>
+                            <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                            <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                        </select>
+                        <button type="submit" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">Apply</button>
+                        <a href="{{ route('users.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Reset</a>
+                    </div>
+                </form>
             </div>
 
             <!-- Users List -->
@@ -96,17 +107,6 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                 </svg>
                                             </a>
-                                            @if(auth()->user()->isSuperAdmin() && $user->id !== auth()->id())
-                                                <form action="{{ route('users.destroy', $user) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
-                                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -141,10 +141,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
                     <select name="role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
                         <option value="user">User</option>
-                        @if(auth()->user()->isSuperAdmin())
-                            <option value="manager">Manager</option>
-                            <option value="super_admin">Super Admin</option>
-                        @endif
+                        <option value="manager">Manager</option>
                     </select>
                 </div>
                 <div>

@@ -7,6 +7,7 @@ use App\Models\TaskCollaborator;
 use App\Models\TaskFile;
 use App\Models\TaskHistory;
 use App\Models\TaskNotification;
+use App\Models\TimeRevisionRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
@@ -110,6 +111,10 @@ class TaskController extends Controller
             ? collect($data['assigned_to'] ?? [])->filter()->values()->all()
             : [];
 
+        $collaborateUsers = $user->isManager() || $user->isSuperAdmin()
+            ? collect($data['collaborate_with'] ?? [])->filter()->values()->all()
+            : [];
+
         $task = Task::create([
             'title' => $data['title'],
             'description' => $data['description'],
@@ -140,6 +145,30 @@ class TaskController extends Controller
                 $assignedUser = \App\Models\User::find($userId);
                 if ($assignedUser) {
                     $this->createNotification($assignedUser, 'Task Assigned', "You have been assigned to task '{$task->title}'.");
+                }
+            }
+        }
+
+        if (! empty($collaborateUsers)) {
+            foreach ($collaborateUsers as $userId) {
+                if (! in_array($userId, $assignedUsers)) {
+                    $task->collaborators()->attach($userId, ['invitation_status' => 'pending']);
+
+                    TaskHistory::create([
+                        'task_id' => $task->id,
+                        'action' => 'Collaborator Invited',
+                        'user_id' => $user->id,
+                    ]);
+
+                    $collaboratorUser = \App\Models\User::find($userId);
+                    if ($collaboratorUser) {
+                        $this->createNotification($collaboratorUser, 'Collaboration Invitation', "You have been invited to collaborate on task '{$task->title}'.");
+                    }
+
+                    $admins = \App\Models\User::whereIn('role', ['super_admin', 'manager'])->get();
+                    foreach ($admins as $admin) {
+                        $this->createNotification($admin, 'Collaboration Approval Needed', "A collaboration request for task '{$task->title}' is pending approval.");
+                    }
                 }
             }
         }
@@ -194,15 +223,24 @@ class TaskController extends Controller
         $task = Task::findOrFail($id);
         $user = auth()->user();
 
-        if (! $this->canEditTask($task, $user)) {
-            abort(Response::HTTP_FORBIDDEN);
+        // Allow status updates for authorized users
+        $isStatusOnlyUpdate = $request->has('status') && ! $request->has('title');
+
+        if ($isStatusOnlyUpdate) {
+            if (! $this->canUpdateStatus($task, $user)) {
+                abort(Response::HTTP_FORBIDDEN);
+            }
+        } else {
+            if (! $this->canEditTask($task, $user)) {
+                abort(Response::HTTP_FORBIDDEN);
+            }
         }
 
         $rules = [
-            'title' => 'required|max:255',
-            'description' => 'required',
-            'due_date' => 'required|date',
-            'due_time' => 'required',
+            'title' => $isStatusOnlyUpdate ? 'nullable' : 'required|max:255',
+            'description' => $isStatusOnlyUpdate ? 'nullable' : 'required',
+            'due_date' => $isStatusOnlyUpdate ? 'nullable' : 'required|date',
+            'due_time' => $isStatusOnlyUpdate ? 'nullable' : 'required',
             'priority' => 'nullable|in:low,medium,high',
             'status' => 'nullable|in:new,ongoing,completed,late',
             'attachment' => 'nullable|mimes:pdf|max:51200',
@@ -211,6 +249,8 @@ class TaskController extends Controller
         if ($request->user()->isManager() || $request->user()->isSuperAdmin()) {
             $rules['assigned_to'] = 'nullable|array';
             $rules['assigned_to.*'] = 'exists:users,id';
+            $rules['collaborate_with'] = 'nullable|array';
+            $rules['collaborate_with.*'] = 'exists:users,id';
         }
 
         $data = $request->validate($rules);
@@ -219,23 +259,43 @@ class TaskController extends Controller
             ? collect($data['assigned_to'] ?? [])->filter()->values()->all()
             : [];
 
+        $collaborateUsers = $request->user()->isManager() || $request->user()->isSuperAdmin()
+            ? collect($data['collaborate_with'] ?? [])->filter()->values()->all()
+            : [];
+
         $oldAssignedTo = $task->assigned_to;
+
+        // PDF constraint for completing tasks (applies to all users)
+        if (isset($data['status']) && $data['status'] === 'completed') {
+            if (! $request->hasFile('attachment')) {
+                return redirect()->back()->with('error', 'You must upload a PDF file to mark the task as completed.');
+            }
+        }
 
         if (! ($user->isSuperAdmin() || $user->isManager()) && $task->approval_status !== 'approved') {
             unset($data['status']);
         }
 
         $task->update([
-            'title' => $data['title'],
-            'description' => $data['description'],
-            'due_date' => $data['due_date'],
-            'due_time' => $data['due_time'],
+            'title' => $data['title'] ?? $task->title,
+            'description' => $data['description'] ?? $task->description,
+            'due_date' => $data['due_date'] ?? $task->due_date,
+            'due_time' => $data['due_time'] ?? $task->due_time,
             'assigned_to' => $request->user()->isManager() || $request->user()->isSuperAdmin()
                 ? (count($assignedUsers) ? $assignedUsers[0] : null)
                 : $task->assigned_to,
             'priority' => $data['priority'] ?? $task->priority,
             'status' => $data['status'] ?? $task->status,
         ]);
+
+        // Create task history for status change
+        if (isset($data['status']) && $data['status'] !== $task->getOriginal('status')) {
+            TaskHistory::create([
+                'task_id' => $task->id,
+                'action' => 'Status Changed to ' . ucfirst($data['status']),
+                'user_id' => $user->id,
+            ]);
+        }
 
         if (! empty($assignedUsers)) {
             $syncData = [];
@@ -262,6 +322,30 @@ class TaskController extends Controller
             }
         } elseif ($request->user()->isManager() || $request->user()->isSuperAdmin()) {
             $task->collaborators()->detach();
+        }
+
+        if (! empty($collaborateUsers)) {
+            foreach ($collaborateUsers as $userId) {
+                if (! in_array($userId, $assignedUsers) && ! $task->collaborators()->where('user_id', $userId)->exists()) {
+                    $task->collaborators()->attach($userId, ['invitation_status' => 'pending']);
+
+                    TaskHistory::create([
+                        'task_id' => $task->id,
+                        'action' => 'Collaborator Invited',
+                        'user_id' => $request->user()->id,
+                    ]);
+
+                    $collaboratorUser = \App\Models\User::find($userId);
+                    if ($collaboratorUser) {
+                        $this->createNotification($collaboratorUser, 'Collaboration Invitation', "You have been invited to collaborate on task '{$task->title}'.");
+                    }
+
+                    $admins = \App\Models\User::whereIn('role', ['super_admin', 'manager'])->get();
+                    foreach ($admins as $admin) {
+                        $this->createNotification($admin, 'Collaboration Approval Needed', "A collaboration request for task '{$task->title}' is pending approval.");
+                    }
+                }
+            }
         }
 
         if ($request->hasFile('attachment')) {
@@ -492,5 +576,54 @@ class TaskController extends Controller
             || $task->created_by === $user->id
             || $task->assigned_to === $user->id
             || $task->collaborators()->where('user_id', $user->id)->where('invitation_status', 'accepted')->exists();
+    }
+
+    protected function canUpdateStatus(Task $task, $user): bool
+    {
+        return $user->isSuperAdmin()
+            || $user->isManager()
+            || $task->assigned_to === $user->id
+            || $task->created_by === $user->id
+            || $task->collaborators()->where('user_id', $user->id)->where('invitation_status', 'accepted')->exists();
+    }
+
+    public function requestTimeRevision(Request $request, string $id)
+    {
+        $task = Task::findOrFail($id);
+        $user = auth()->user();
+
+        if (! $this->canAccessTask($task, $user)) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $data = $request->validate([
+            'requested_due_date' => 'required|date',
+            'requested_due_time' => 'required',
+            'reason' => 'nullable|string',
+        ]);
+
+        $revisionRequest = TimeRevisionRequest::create([
+            'task_id' => $task->id,
+            'user_id' => $user->id,
+            'requested_due_date' => $data['requested_due_date'],
+            'requested_due_time' => $data['requested_due_time'],
+            'reason' => $data['reason'] ?? null,
+            'status' => 'pending',
+        ]);
+
+        $task->update(['time_revision_status' => 'pending']);
+
+        TaskHistory::create([
+            'task_id' => $task->id,
+            'action' => 'Time Revision Requested',
+            'user_id' => $user->id,
+        ]);
+
+        $managers = \App\Models\User::whereIn('role', ['super_admin', 'manager'])->get();
+        foreach ($managers as $manager) {
+            $this->createNotification($manager, 'Time Revision Request', "A time revision request has been submitted for task '{$task->title}'.");
+        }
+
+        return redirect()->route('tasks.show', $task)->with('success', 'Time revision request submitted successfully.');
     }
 }

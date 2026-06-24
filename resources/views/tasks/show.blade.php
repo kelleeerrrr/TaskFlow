@@ -5,6 +5,30 @@
 
     <div class="py-12">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+            @if($task->approval_status === 'approved' && $task->status === 'new')
+                @php
+                    $canStartTask = auth()->user()->isSuperAdmin()
+                        || auth()->user()->isManager()
+                        || $task->assigned_to === auth()->id()
+                        || $task->created_by === auth()->id()
+                        || $task->collaborators()->where('user_id', auth()->id())->where('invitation_status', 'accepted')->exists();
+                @endphp
+                @if($canStartTask)
+                    <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold text-blue-800">Task is ready to start</h3>
+                            <p class="text-sm text-blue-600">Change status to Ongoing to begin working on this task.</p>
+                        </div>
+                        <form action="{{ route('tasks.update', $task) }}" method="POST">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="status" value="ongoing">
+                            <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-blue-500 border border-transparent rounded-lg text-white hover:bg-blue-600 transition-all">Start Task</button>
+                        </form>
+                    </div>
+                @endif
+            @endif
+
             <div class="bg-white shadow-lg rounded-xl p-8 border border-gray-200 space-y-4">
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -30,6 +54,10 @@
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="font-medium">Due Date</p>
                         <p>{{ $task->due_date }}</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <p class="font-medium">Time Revision Status</p>
+                        <p>{{ ucfirst($task->time_revision_status ?? 'none') }}</p>
                     </div>
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="font-medium">Due Time</p>
@@ -66,66 +94,72 @@
                     </div>
                 @endif
 
-                @if($task->collaborators->isNotEmpty())
+                @if($task->approval_status === 'pending' && auth()->id() === $task->created_by)
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                        <h3 class="font-semibold">Assigned Users</h3>
-                        <ul class="mt-3 space-y-2">
-                            <li class="flex items-center justify-between">
-                                <span>{{ optional($task->creator)->name }} <span class="text-sm text-gray-500">(Creator)</span></span>
-                            </li>
-                            @foreach($task->collaborators as $collaborator)
-                                <li class="flex items-center justify-between">
-                                    <span>
-                                        {{ $collaborator->name }}
-                                        <span class="text-sm text-gray-500">(
-                                            @if($collaborator->pivot->invitation_status === 'pending')
-                                                Pending Approval
-                                            @else
-                                                {{ ucfirst($collaborator->pivot->invitation_status) }}
-                                            @endif
-                                        )</span>
-                                    </span>
-                                    @if(($collaborator->pivot->invitation_status === 'pending') && (auth()->user()->isSuperAdmin() || auth()->user()->isManager()))
-                                        <div class="flex gap-2">
-                                            <form action="{{ route('tasks.accept-invitation', $task) }}" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="user_id" value="{{ $collaborator->id }}">
-                                                <button type="submit" class="text-green-600 hover:text-green-700 font-medium">Approve</button>
-                                            </form>
-                                            <form action="{{ route('tasks.reject-invitation', $task) }}" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="user_id" value="{{ $collaborator->id }}">
-                                                <button type="submit" class="text-red-600 hover:text-red-700 font-medium">Reject</button>
-                                            </form>
-                                        </div>
-                                    @endif
-                                </li>
-                            @endforeach
-                        </ul>
+                        <h3 class="font-semibold">Cancel Task Request</h3>
+                        <p class="mt-2 text-sm text-gray-600">Your task is pending approval. You can cancel this request.</p>
+                        <form action="{{ route('tasks.destroy', $task) }}" method="POST" class="mt-4">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-500 border border-transparent rounded-lg text-white hover:bg-red-600 transition-all">Cancel Task</button>
+                        </form>
                     </div>
                 @endif
 
-                @if((auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->assigned_to === auth()->id()) && $task->approval_status === 'approved' && $task->status !== 'completed')
+                @if($task->approval_status === 'approved' && $task->status === 'new' && (auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->assigned_to === auth()->id()))
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                        <h3 class="font-semibold">Update Progress</h3>
+                        <h3 class="font-semibold">Start Task</h3>
+                        <p class="mt-2 text-sm text-gray-600">Change status from New to Ongoing to begin working on this task.</p>
+                        <form action="{{ route('tasks.update', $task) }}" method="POST" class="mt-4">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="status" value="ongoing">
+                            <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-blue-500 border border-transparent rounded-lg text-white hover:bg-blue-600 transition-all">Start Task</button>
+                        </form>
+                    </div>
+                @endif
+
+                @if($task->approval_status === 'approved' && $task->status === 'ongoing' && (auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->assigned_to === auth()->id()))
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <h3 class="font-semibold">Complete Task</h3>
+                        <p class="mt-2 text-sm text-gray-600">Upload a PDF file (max 50MB) to mark this task as completed.</p>
                         <form action="{{ route('tasks.update', $task) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
                             @csrf
                             @method('PUT')
+                            <input type="hidden" name="status" value="completed">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                <select name="status" class="w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-orange-500 focus:ring-orange-500">
-                                    <option value="new" {{ $task->status === 'new' ? 'selected' : '' }}>New</option>
-                                    <option value="ongoing" {{ $task->status === 'ongoing' ? 'selected' : '' }}>Ongoing</option>
-                                    <option value="completed">Completed</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">PDF Attachment</label>
-                                <input type="file" name="attachment" accept="application/pdf" class="w-full text-sm text-gray-700" />
-                                <p class="text-sm text-gray-500 mt-1">Upload a PDF up to 50 MB when completing a task.</p>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">PDF Attachment (Required)</label>
+                                <input type="file" name="attachment" accept="application/pdf" class="w-full text-sm text-gray-700" required />
+                                <p class="text-sm text-gray-500 mt-1">Upload a PDF up to 50 MB to complete the task.</p>
                             </div>
                             <div class="flex justify-end">
-                                <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-orange-500 border border-transparent rounded-lg text-white hover:bg-orange-600 transition-all">Update Progress</button>
+                                <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-green-500 border border-transparent rounded-lg text-white hover:bg-green-600 transition-all">Complete Task</button>
+                            </div>
+                        </form>
+                    </div>
+                @endif
+
+                @if(auth()->user()->isUser() && $task->approval_status === 'approved' && in_array($task->status, ['new', 'ongoing']))
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <h3 class="font-semibold mb-3">Request Time Revision</h3>
+                        <form action="{{ route('tasks.time-revision', $task) }}" method="POST" class="space-y-4">
+                            @csrf
+                            <div class="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Requested Due Date</label>
+                                    <input type="date" name="requested_due_date" class="w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-orange-500 focus:ring-orange-500" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Requested Due Time</label>
+                                    <input type="time" name="requested_due_time" class="w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-orange-500 focus:ring-orange-500" required>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                                <textarea name="reason" class="w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-orange-500 focus:ring-orange-500" rows="2"></textarea>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-500 border border-transparent rounded-lg text-white hover:bg-blue-600 transition-all">Request Revision</button>
                             </div>
                         </form>
                     </div>
@@ -179,7 +213,7 @@
 
                 <div class="flex items-center gap-4">
                     <a href="{{ route('tasks.index') }}" class="text-gray-600 hover:text-gray-900">Back to tasks</a>
-                    @if(auth()->id() === $task->created_by || auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->collaborators()->where('user_id', auth()->id())->where('invitation_status', 'accepted')->exists())
+                    @if(!auth()->user()->isUser() && (auth()->id() === $task->created_by || auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->collaborators()->where('user_id', auth()->id())->where('invitation_status', 'accepted')->exists()))
                         <a href="{{ route('tasks.edit', $task) }}" class="inline-flex items-center px-5 py-2.5 bg-orange-500 border border-transparent rounded-lg text-white hover:bg-orange-600 shadow-md hover:shadow-lg transition-all">Edit Task</a>
                     @endif
                 </div>

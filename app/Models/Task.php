@@ -19,6 +19,8 @@ class Task extends Model
         'due_date',
         'due_time',
         'approval_status',
+        'time_revision_request',
+        'time_revision_status',
     ];
 
     public function creator()
@@ -46,5 +48,10 @@ class Task extends Model
     public function files()
     {
         return $this->hasMany(TaskFile::class);
+    }
+
+    public function timeRevisionRequests()
+    {
+        return $this->hasMany(TimeRevisionRequest::class);
     }
 }

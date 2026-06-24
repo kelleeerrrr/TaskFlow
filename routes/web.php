@@ -5,6 +5,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\RequestController;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Controllers\ProfileController;
@@ -38,12 +39,23 @@ Route::middleware(['auth', 'active.account'])->group(function () {
         Route::get('/collaborations', [TaskController::class, 'collaborationRequests'])->name('collaborations.index');
     });
 
+    Route::middleware('role:manager')->group(function () {
+        Route::prefix('requests')->name('requests.')->group(function () {
+            Route::get('/', [RequestController::class, 'index'])->name('index');
+            Route::post('/collaborations/{task}/approve', [RequestController::class, 'approveCollaboration'])->name('approve-collaboration');
+            Route::post('/collaborations/{task}/reject', [RequestController::class, 'rejectCollaboration'])->name('reject-collaboration');
+            Route::post('/time-revisions/{id}/approve', [RequestController::class, 'approveTimeRevision'])->name('approve-time-revision');
+            Route::post('/time-revisions/{id}/reject', [RequestController::class, 'rejectTimeRevision'])->name('reject-time-revision');
+        });
+    });
+
     Route::resource('tasks', TaskController::class);
     Route::post('/tasks/{task}/approve', [TaskController::class, 'approve'])->name('tasks.approve');
     Route::post('/tasks/{task}/reject', [TaskController::class, 'reject'])->name('tasks.reject');
     Route::post('/tasks/{task}/invite', [TaskController::class, 'inviteCollaborator'])->name('tasks.invite');
     Route::post('/tasks/{task}/accept-invitation', [TaskController::class, 'acceptInvitation'])->name('tasks.accept-invitation');
     Route::post('/tasks/{task}/reject-invitation', [TaskController::class, 'rejectInvitation'])->name('tasks.reject-invitation');
+    Route::post('/tasks/{task}/time-revision', [TaskController::class, 'requestTimeRevision'])->name('tasks.time-revision');
 
     Route::prefix('notifications')->name('notifications.')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');

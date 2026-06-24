@@ -14,7 +14,20 @@ class UserController extends Controller
         $this->authorize('viewAny', User::class);
 
         $roleFilter = $request->query('role');
+        $statusFilter = $request->query('status');
+        $search = $request->query('search');
         $query = User::latest();
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($statusFilter && in_array($statusFilter, ['active', 'inactive'])) {
+            $query->where('status', $statusFilter);
+        }
 
         if ($roleFilter && in_array($roleFilter, ['manager', 'user'])) {
             $query->where('role', $roleFilter);
@@ -22,7 +35,7 @@ class UserController extends Controller
 
         $users = $query->paginate(15);
 
-        return view('users.index', compact('users', 'roleFilter'));
+        return view('users.index', compact('users', 'roleFilter', 'statusFilter'));
     }
 
     public function create()
@@ -40,7 +53,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => 'required|in:super_admin,manager,user',
+            'role' => 'required|in:manager,user',
             'status' => 'required|in:active,inactive',
         ]);
 
@@ -59,7 +72,16 @@ class UserController extends Controller
     {
         $this->authorize('view', $user);
 
-        return view('users.show', compact('user'));
+        $tasks = Task::where('created_by', $user->id)
+            ->orWhere('assigned_to', $user->id)
+            ->orWhereHas('collaborators', function ($q) use ($user) {
+                $q->where('user_id', $user->id)->where('invitation_status', 'accepted');
+            })
+            ->with(['creator', 'assignedUser'])
+            ->latest()
+            ->get();
+
+        return view('users.show', compact('user', 'tasks'));
     }
 
     public function edit(User $user)
@@ -76,7 +98,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'role' => 'required|in:super_admin,manager,user',
+            'role' => 'required|in:manager,user',
             'status' => 'required|in:active,inactive',
         ]);
 

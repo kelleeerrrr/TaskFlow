@@ -94,7 +94,7 @@
                                     <div class="flex-1">
                                         <h3 class="font-medium text-gray-800">{{ $task->title }}</h3>
                                         <p class="text-sm text-gray-600 mt-1">
-                                            Assigned to: {{ optional($task->assignedUser)->name ?? 'Unassigned' }}
+                                            Due: {{ $task->due_date }} {{ $task->due_time }}
                                         </p>
                                     </div>
                                     <div class="flex items-center gap-4">
@@ -109,9 +109,6 @@
                                         @endphp
                                         <span class="px-3 py-1 rounded-full text-xs font-medium {{ $statusClasses }}">
                                             {{ $statusLabel }}
-                                        </span>
-                                        <span class="text-sm text-gray-500">
-                                            {{ $task->due_date }}
                                         </span>
                                         <a href="{{ route('tasks.show', $task) }}" class="inline-flex items-center px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors">View</a>
                                     </div>

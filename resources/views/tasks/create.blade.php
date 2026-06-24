@@ -45,6 +45,16 @@
                             <p class="mt-2 text-sm text-gray-500">Hold Ctrl (Windows) / Cmd (Mac) to select multiple users.</p>
                             @error('assigned_to')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Collaborate With</label>
+                            <select name="collaborate_with[]" multiple class="mt-1 block w-full border-gray-300 rounded-lg border px-3 py-2 focus:border-orange-500 focus:ring-orange-500">
+                                @foreach(\App\Models\User::where('role', 'user')->get() as $user)
+                                    <option value="{{ $user->id }}" {{ in_array($user->id, old('collaborate_with', [])) ? 'selected' : '' }}>{{ $user->name }} ({{ $user->email }})</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-2 text-sm text-gray-500">Hold Ctrl (Windows) / Cmd (Mac) to select multiple users.</p>
+                            @error('collaborate_with')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+                        </div>
                     @endif
 
                     <div class="mb-4">

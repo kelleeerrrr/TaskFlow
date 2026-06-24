@@ -79,4 +79,9 @@ class User extends Authenticatable
     {
         return $this->status === 'active';
     }
+
+    public function isUser(): bool
+    {
+        return $this->role === 'user';
+    }
 }

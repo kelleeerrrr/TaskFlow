@@ -2,12 +2,6 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="text-3xl font-bold text-gray-800">Reports & Analytics</h2>
-            <button onclick="document.getElementById('detectLateModal').classList.remove('hidden')" class="flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 shadow-md hover:shadow-lg transition-all">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Detect Late Tasks
-            </button>
         </div>
     </x-slot>
 
@@ -213,25 +207,6 @@
                         @endforeach
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Detect Late Tasks Modal -->
-    <div id="detectLateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <h2 class="text-xl font-semibold mb-4">Detect Late Tasks</h2>
-            <p class="text-gray-600 mb-6">This will mark all tasks past their deadline as "late". Are you sure?</p>
-            <div class="flex gap-3">
-                <button onclick="document.getElementById('detectLateModal').classList.add('hidden')" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                    Cancel
-                </button>
-                <form action="{{ route('reports.detect-late') }}" method="POST" class="flex-1">
-                    @csrf
-                    <button type="submit" class="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-                        Detect
-                    </button>
-                </form>
             </div>
         </div>
     </div>

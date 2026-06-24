@@ -2,12 +2,14 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="text-3xl font-bold text-gray-800">Tasks</h2>
-            <button onclick="document.getElementById('taskModal').classList.remove('hidden')" class="flex items-center gap-2 bg-orange-500 text-white px-5 py-2.5 rounded-lg hover:bg-orange-600 shadow-md hover:shadow-lg transition-all">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                New Task
-            </button>
+            @if(!auth()->user()->isSuperAdmin())
+                <button onclick="document.getElementById('taskModal').classList.remove('hidden')" class="flex items-center gap-2 bg-orange-500 text-white px-5 py-2.5 rounded-lg hover:bg-orange-600 shadow-md hover:shadow-lg transition-all">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    New Task
+                </button>
+            @endif
         </div>
     </x-slot>
 
@@ -27,19 +29,23 @@
                             </svg>
                             <input name="search" type="text" value="{{ request('search') }}" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
                         </div>
-                        <select name="assigned" onchange="document.getElementById('taskFilterForm').submit()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                            <option value="">All Tasks</option>
-                            <option value="me" {{ request('assigned') === 'me' ? 'selected' : '' }}>Assigned to me</option>
-                        </select>
+                        @if(!auth()->user()->isManager())
+                            <select name="assigned" onchange="document.getElementById('taskFilterForm').submit()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                <option value="">All Tasks</option>
+                                <option value="me" {{ request('assigned') === 'me' ? 'selected' : '' }}>Assigned to me</option>
+                            </select>
+                        @endif
                         <select name="status" onchange="document.getElementById('taskFilterForm').submit()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
                             <option value="">All Status</option>
                             <option value="new" {{ request('status') === 'new' ? 'selected' : '' }}>New</option>
                             <option value="ongoing" {{ request('status') === 'ongoing' ? 'selected' : '' }}>Ongoing</option>
                             <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
                             <option value="late" {{ request('status') === 'late' ? 'selected' : '' }}>Late</option>
-                            <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending Approval</option>
-                            <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
-                            <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                            @if(!auth()->user()->isManager())
+                                <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending Approval</option>
+                                <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
+                                <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                            @endif
                         </select>
                         <button type="submit" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">Apply</button>
                         <a href="{{ route('tasks.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Reset</a>
@@ -70,12 +76,11 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deadline</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @foreach($tasks as $task)
-                                <tr class="hover:bg-gray-50">
+                                <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location.href='{{ route('tasks.show', $task) }}'">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center">
                                             <svg class="h-5 w-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,42 +123,6 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
                                             {{ $task->due_date }}
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2">
-                                            @if($task->approval_status === 'pending')
-                                                @if(auth()->user()->isManager() || auth()->user()->isSuperAdmin())
-                                                    <form action="{{ route('tasks.approve', $task) }}" method="POST" class="inline">
-                                                        @csrf
-                                                        <button type="submit" class="p-1 text-green-600 hover:bg-green-50 rounded" title="Approve Task">
-                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                                            </svg>
-                                                        </button>
-                                                    </form>
-                                                    <form action="{{ route('tasks.reject', $task) }}" method="POST" class="inline">
-                                                        @csrf
-                                                        <button type="submit" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Reject Task">
-                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                            </svg>
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                            @elseif(in_array($task->status, ['new', 'ongoing']))
-                                                <a href="{{ route('tasks.edit', $task) }}" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
-                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                    </svg>
-                                                </a>
-                                            @elseif($task->status === 'completed')
-                                                <button type="button" onclick="openDeleteModal('{{ route('tasks.destroy', $task) }}')" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
-                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                    </svg>
-                                                </button>
-                                            @endif
                                         </div>
                                     </td>
                                 </tr>

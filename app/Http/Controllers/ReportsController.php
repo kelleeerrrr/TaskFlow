@@ -18,37 +18,29 @@ class ReportsController extends Controller
             'late' => Task::where('status', 'late')->count(),
         ];
 
-        $userPerformance = User::withCount(['tasks as total_tasks', 'tasks as completed_tasks' => function($q) {
-            $q->where('status', 'completed');
-        }, 'tasks as ongoing_tasks' => function($q) {
-            $q->where('status', 'ongoing');
-        }, 'tasks as late_tasks' => function($q) {
-            $q->where('status', 'late');
-        }])
-        ->get()
-        ->map(function($user) {
-            if ($user->role !== 'user') {
-                $user->total_tasks = 0;
-                $user->completed_tasks = 0;
-                $user->ongoing_tasks = 0;
-                $user->late_tasks = 0;
-                $user->completion_rate = 0;
+        $userPerformance = User::where('role', 'user')
+            ->withCount(['tasks as total_tasks', 'tasks as completed_tasks' => function($q) {
+                $q->where('status', 'completed');
+            }, 'tasks as ongoing_tasks' => function($q) {
+                $q->where('status', 'ongoing');
+            }, 'tasks as late_tasks' => function($q) {
+                $q->where('status', 'late');
+            }])
+            ->get()
+            ->map(function($user) {
+                $user->completion_rate = $user->total_tasks > 0
+                    ? round(($user->completed_tasks / $user->total_tasks) * 100, 1)
+                    : 0;
                 return $user;
-            }
-
-            $user->completion_rate = $user->total_tasks > 0 
-                ? round(($user->completed_tasks / $user->total_tasks) * 100, 1) 
-                : 0;
-            return $user;
-        });
+            });
 
         $teamProductivity = [
-            'users_meeting_deadlines' => User::whereHas('tasks', function($q) {
+            'users_meeting_deadlines' => User::where('role', 'user')->whereHas('tasks', function($q) {
                 $q->where('status', '!=', 'late');
             })->count(),
             'overdue_tasks' => Task::where('status', 'late')->count(),
-            'team_completion_percentage' => $taskSummary['total'] > 0 
-                ? round(($taskSummary['completed'] / $taskSummary['total']) * 100, 1) 
+            'team_completion_percentage' => $taskSummary['total'] > 0
+                ? round(($taskSummary['completed'] / $taskSummary['total']) * 100, 1)
                 : 0,
         ];
 
