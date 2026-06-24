@@ -118,19 +118,6 @@
                     </div>
                 @endif
 
-                @if($task->approval_status === 'approved' && $task->status === 'new' && (auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->assigned_to === auth()->id()))
-                    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                        <h3 class="font-semibold">Start Task</h3>
-                        <p class="mt-2 text-sm text-gray-600">Change status from New to Ongoing to begin working on this task.</p>
-                        <form action="{{ route('tasks.update', $task) }}" method="POST" class="mt-4">
-                            @csrf
-                            @method('PUT')
-                            <input type="hidden" name="status" value="ongoing">
-                            <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-blue-500 border border-transparent rounded-lg text-white hover:bg-blue-600 transition-all">Start Task</button>
-                        </form>
-                    </div>
-                @endif
-
                 @if(auth()->user()->isSuperAdmin() || auth()->user()->isManager() || auth()->id() === $task->created_by || auth()->id() === $task->assigned_to)
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <h3 class="font-semibold mb-3">Invite Collaborator</h3>
@@ -173,7 +160,7 @@
                     </div>
                 @endif
 
-                @if($task->approval_status === 'approved' && $task->status === 'ongoing' && (auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->assigned_to === auth()->id()))
+                @if($task->approval_status === 'approved' && $task->status === 'ongoing' && $task->assigned_to === auth()->id())
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <h3 class="font-semibold">Complete Task</h3>
                         <p class="mt-2 text-sm text-gray-600">Upload a PDF file (max 50MB) to mark this task as completed.</p>

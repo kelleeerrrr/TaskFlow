@@ -137,9 +137,22 @@
                                         {{ $task->due_date }}
                                     </td>
                                     <td class="px-6 py-4">
-                                        <button onclick="openTaskDetailsModal({{ $task->id }})" class="text-orange-600 hover:text-orange-800 font-medium text-sm">
-                                            View
-                                        </button>
+                                        @if((auth()->user()->isManager() || auth()->user()->isSuperAdmin()) && $task->approval_status === 'pending')
+                                            <div class="flex gap-2">
+                                                <form action="{{ route('tasks.approve', $task) }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit" class="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600">Approve</button>
+                                                </form>
+                                                <form action="{{ route('tasks.reject', $task) }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">Decline</button>
+                                                </form>
+                                            </div>
+                                        @else
+                                            <button onclick="openTaskDetailsModal({{ $task->id }})" class="text-orange-600 hover:text-orange-800 font-medium text-sm">
+                                                View
+                                            </button>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
