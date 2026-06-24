@@ -1,6 +1,7 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-200">
+<nav x-data="{ open: false, notificationsOpen: false }" class="bg-white border-b border-gray-200">
     @php
         $unreadNotifications = auth()->user()->notifications()->where('is_read', false)->count();
+        $notifications = auth()->user()->notifications()->latest()->limit(5)->get();
     @endphp
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,9 +34,6 @@
                         </a>
                     @endif
                     @if(auth()->user()->isSuperAdmin() || auth()->user()->isManager())
-                        <a href="{{ route('reports.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('reports.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
-                            {{ __('Reports') }}
-                        </a>
                         @if(auth()->user()->isManager())
                             <a href="{{ route('requests.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('requests.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
                                 {{ __('Requests') }}
@@ -45,20 +43,55 @@
                                 {{ __('Collaboration') }}
                             </a>
                         @endif
-                    @endif
-                    @if(!auth()->user()->isSuperAdmin())
-                        <a href="{{ route('notifications.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('notifications.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
-                            {{ __('Notifications') }}
-                            @if($unreadNotifications > 0)
-                                <span class="ml-2 inline-flex items-center justify-center rounded-full bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white">{{ $unreadNotifications }}</span>
-                            @endif
+                        <a href="{{ route('reports.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('reports.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
+                            {{ __('Reports') }}
                         </a>
                     @endif
                 </div>
             </div>
 
-            <!-- Settings Dropdown -->
+            <!-- Right Side: Notifications & User -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
+                <!-- Notification Bell -->
+                <div class="relative mr-4">
+                    <button @click="notificationsOpen = ! notificationsOpen" class="relative inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:text-black hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        @if($unreadNotifications > 0)
+                            <span class="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-orange-500 px-1.5 py-0.5 text-xs font-semibold text-white">
+                                {{ $unreadNotifications }}
+                            </span>
+                        @endif
+                    </button>
+
+                    <!-- Notification Dropdown -->
+                    <div x-show="notificationsOpen" @click.away="notificationsOpen = false" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                        <div class="px-4 py-2 border-b border-gray-200">
+                            <h3 class="text-sm font-semibold text-gray-800">Notifications</h3>
+                        </div>
+                        @if($notifications->count() > 0)
+                            <div class="max-h-64 overflow-y-auto">
+                                @foreach($notifications as $notification)
+                                    <a href="{{ $notification->link ?? '#' }}" class="block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 @if(!$notification->is_read) bg-orange-50 @endif">
+                                        <p class="text-sm font-medium text-gray-900">{{ $notification->title }}</p>
+                                        <p class="text-xs text-gray-600 mt-1">{{ $notification->message }}</p>
+                                        <p class="text-xs text-gray-400 mt-1">{{ $notification->created_at->diffForHumans() }}</p>
+                                    </a>
+                                @endforeach
+                            </div>
+                            <div class="px-4 py-2 border-t border-gray-200">
+                                <a href="{{ route('notifications.index') }}" class="block text-sm text-orange-600 hover:text-orange-800 font-medium">View All Notifications</a>
+                            </div>
+                        @else
+                            <div class="px-4 py-4 text-center text-gray-500 text-sm">
+                                No notifications
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Settings Dropdown -->
                 <div class="relative">
                     <button @click="open = ! open" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-black bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500">
                         <div>{{ Auth::user()->name }}</div>
@@ -108,18 +141,21 @@
                 </a>
             @endif
             @if(auth()->user()->isSuperAdmin() || auth()->user()->isManager())
+                @if(auth()->user()->isManager())
+                    <a href="{{ route('requests.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('requests.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
+                        {{ __('Requests') }}
+                    </a>
+                @endif
                 <a href="{{ route('reports.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('reports.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
                     {{ __('Reports') }}
                 </a>
             @endif
-            @if(!auth()->user()->isSuperAdmin())
-                <a href="{{ route('notifications.index') }}" class="flex items-center justify-between px-4 py-2 text-base font-medium {{ request()->routeIs('notifications.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
-                    <span>{{ __('Notifications') }}</span>
-                    @if($unreadNotifications > 0)
-                        <span class="inline-flex items-center justify-center rounded-full bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white">{{ $unreadNotifications }}</span>
-                    @endif
-                </a>
-            @endif
+            <a href="{{ route('notifications.index') }}" class="flex items-center justify-between px-4 py-2 text-base font-medium {{ request()->routeIs('notifications.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
+                <span>{{ __('Notifications') }}</span>
+                @if($unreadNotifications > 0)
+                    <span class="inline-flex items-center justify-center rounded-full bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white">{{ $unreadNotifications }}</span>
+                @endif
+            </a>
         </div>
 
         <!-- Responsive Settings Options -->

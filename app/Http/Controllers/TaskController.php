@@ -20,6 +20,9 @@ class TaskController extends Controller
         $search = $request->query('search');
         $statusFilter = $request->query('status');
         $assignedFilter = $request->query('assigned');
+        $priorityFilter = $request->query('priority');
+        $assignedToFilter = $request->query('assigned_to');
+        $dueDateFilter = $request->query('due_date');
 
         $query = Task::with(['creator', 'assignedUser', 'collaborators']);
 
@@ -36,11 +39,11 @@ class TaskController extends Controller
             // Users can only see their own tasks or shared tasks
             $query->where(function ($q) use ($user) {
                 $q->where('created_by', $user->id)
+                  ->orWhere('assigned_to', $user->id)
                   ->orWhereHas('collaborators', function ($query) use ($user) {
                       $query->where('user_id', $user->id)
                             ->where('invitation_status', 'accepted');
-                  })
-                  ->orWhere('assigned_to', $user->id);
+                  });
             });
         }
 
@@ -55,11 +58,23 @@ class TaskController extends Controller
         }
 
         if ($statusFilter) {
-            if (in_array($statusFilter, ['new', 'ongoing', 'completed', 'late'])) {
+            if (in_array($statusFilter, ['new', 'ongoing', 'completed', 'rejected'])) {
                 $query->where('status', $statusFilter);
-            } elseif (in_array($statusFilter, ['pending', 'approved', 'rejected'])) {
-                $query->where('approval_status', $statusFilter);
+            } elseif ($statusFilter === 'pending') {
+                $query->where('approval_status', 'pending');
             }
+        }
+
+        if ($priorityFilter) {
+            $query->where('priority', $priorityFilter);
+        }
+
+        if ($assignedToFilter) {
+            $query->where('assigned_to', $assignedToFilter);
+        }
+
+        if ($dueDateFilter) {
+            $query->whereDate('due_date', $dueDateFilter);
         }
 
         $tasks = $query->latest()->paginate(15)->appends($request->query());
@@ -100,26 +115,22 @@ class TaskController extends Controller
         ];
 
         if ($request->user()->isManager() || $request->user()->isSuperAdmin()) {
-            $rules['assigned_to'] = 'nullable|array';
-            $rules['assigned_to.*'] = 'exists:users,id';
+            $rules['assigned_to'] = 'nullable|exists:users,id';
+            $rules['collaborators'] = 'nullable|array';
+            $rules['collaborators.*'] = 'exists:users,id';
         }
 
         $data = $request->validate($rules);
         $user = $request->user();
 
-        $assignedUsers = $user->isManager() || $user->isSuperAdmin()
-            ? collect($data['assigned_to'] ?? [])->filter()->values()->all()
-            : [];
-
-        $collaborateUsers = $user->isManager() || $user->isSuperAdmin()
-            ? collect($data['collaborate_with'] ?? [])->filter()->values()->all()
-            : [];
+        $assignedUserId = $data['assigned_to'] ?? null;
+        $collaboratorIds = $data['collaborators'] ?? [];
 
         $task = Task::create([
             'title' => $data['title'],
             'description' => $data['description'],
             'created_by' => $user->id,
-            'assigned_to' => count($assignedUsers) ? $assignedUsers[0] : ($user->isUser() ? $user->id : null),
+            'assigned_to' => $assignedUserId,
             'status' => 'new',
             'priority' => $data['priority'] ?? 'medium',
             'due_date' => $data['due_date'],
@@ -127,13 +138,9 @@ class TaskController extends Controller
             'approval_status' => $user->isManager() || $user->isSuperAdmin() ? 'approved' : 'pending',
         ]);
 
-        if (! empty($assignedUsers)) {
-            $syncData = [];
-            foreach ($assignedUsers as $userId) {
-                $syncData[$userId] = ['invitation_status' => 'accepted'];
-            }
-
-            $task->collaborators()->sync($syncData);
+        // Add assigned user as collaborator if specified
+        if ($assignedUserId) {
+            $task->collaborators()->attach($assignedUserId, ['invitation_status' => 'accepted']);
 
             TaskHistory::create([
                 'task_id' => $task->id,
@@ -141,17 +148,16 @@ class TaskController extends Controller
                 'user_id' => $user->id,
             ]);
 
-            foreach ($assignedUsers as $userId) {
-                $assignedUser = \App\Models\User::find($userId);
-                if ($assignedUser) {
-                    $this->createNotification($assignedUser, 'Task Assigned', "You have been assigned to task '{$task->title}'.");
-                }
+            $assignedUser = \App\Models\User::find($assignedUserId);
+            if ($assignedUser) {
+                $this->createNotification($assignedUser, 'Task Assigned', "You have been assigned to task '{$task->title}'.", route('tasks.show', $task->id));
             }
         }
 
-        if (! empty($collaborateUsers)) {
-            foreach ($collaborateUsers as $userId) {
-                if (! in_array($userId, $assignedUsers)) {
+        // Add additional collaborators
+        if (! empty($collaboratorIds)) {
+            foreach ($collaboratorIds as $userId) {
+                if ($userId != $assignedUserId) {
                     $task->collaborators()->attach($userId, ['invitation_status' => 'pending']);
 
                     TaskHistory::create([
@@ -162,12 +168,12 @@ class TaskController extends Controller
 
                     $collaboratorUser = \App\Models\User::find($userId);
                     if ($collaboratorUser) {
-                        $this->createNotification($collaboratorUser, 'Collaboration Invitation', "You have been invited to collaborate on task '{$task->title}'.");
+                        $this->createNotification($collaboratorUser, 'Collaboration Invitation', "You have been invited to collaborate on task '{$task->title}'.", route('tasks.show', $task->id));
                     }
 
                     $admins = \App\Models\User::whereIn('role', ['super_admin', 'manager'])->get();
                     foreach ($admins as $admin) {
-                        $this->createNotification($admin, 'Collaboration Approval Needed', "A collaboration request for task '{$task->title}' is pending approval.");
+                        $this->createNotification($admin, 'Collaboration Approval Needed', "A collaboration request for task '{$task->title}' is pending approval.", route('requests.index'));
                     }
                 }
             }
@@ -317,7 +323,7 @@ class TaskController extends Controller
                 $assignedUser = \App\Models\User::find($userId);
 
                 if ($assignedUser) {
-                    $this->createNotification($assignedUser, 'Task Assigned', "You have been assigned to task '{$task->title}'.");
+                    $this->createNotification($assignedUser, 'Task Assigned', "You have been assigned to task '{$task->title}'.", route('tasks.show', $task->id));
                 }
             }
         } elseif ($request->user()->isManager() || $request->user()->isSuperAdmin()) {
@@ -337,12 +343,12 @@ class TaskController extends Controller
 
                     $collaboratorUser = \App\Models\User::find($userId);
                     if ($collaboratorUser) {
-                        $this->createNotification($collaboratorUser, 'Collaboration Invitation', "You have been invited to collaborate on task '{$task->title}'.");
+                        $this->createNotification($collaboratorUser, 'Collaboration Invitation', "You have been invited to collaborate on task '{$task->title}'.", route('tasks.show', $task->id));
                     }
 
                     $admins = \App\Models\User::whereIn('role', ['super_admin', 'manager'])->get();
                     foreach ($admins as $admin) {
-                        $this->createNotification($admin, 'Collaboration Approval Needed', "A collaboration request for task '{$task->title}' is pending approval.");
+                        $this->createNotification($admin, 'Collaboration Approval Needed', "A collaboration request for task '{$task->title}' is pending approval.", route('requests.index'));
                     }
                 }
             }
@@ -408,7 +414,7 @@ class TaskController extends Controller
             'user_id' => $user->id,
         ]);
 
-        $this->createNotification($task->creator, 'Task Approved', "Your task '{$task->title}' has been approved.");
+        $this->createNotification($task->creator, 'Task Approved', "Your task '{$task->title}' has been approved.", route('tasks.show', $task->id));
 
         return redirect()->route('tasks.show', $task)->with('success', 'Task approved successfully.');
     }
@@ -466,11 +472,11 @@ class TaskController extends Controller
             'user_id' => $user->id,
         ]);
 
-        $this->createNotification($collaborator, 'Collaboration Invitation', "You have been invited to collaborate on task '{$task->title}'. This invitation is pending admin approval.");
+        $this->createNotification($collaborator, 'Collaboration Invitation', "You have been invited to collaborate on task '{$task->title}'. This invitation is pending admin approval.", route('tasks.show', $task->id));
 
         $admins = \App\Models\User::whereIn('role', ['super_admin', 'manager'])->get();
         foreach ($admins as $admin) {
-            $this->createNotification($admin, 'Collaboration Approval Needed', "A collaboration request for task '{$task->title}' is pending approval.");
+            $this->createNotification($admin, 'Collaboration Approval Needed', "A collaboration request for task '{$task->title}' is pending approval.", route('requests.index'));
         }
 
         return redirect()->route('tasks.show', $task)->with('success', 'Collaborator invited successfully and pending admin approval.');
@@ -507,7 +513,7 @@ class TaskController extends Controller
         $collaboratorUser = \App\Models\User::find($data['user_id']);
 
         if ($collaboratorUser) {
-            $this->createNotification($collaboratorUser, 'Collaboration Approved', "Your request to collaborate on '{$task->title}' has been approved.");
+            $this->createNotification($collaboratorUser, 'Collaboration Approved', "Your request to collaborate on '{$task->title}' has been approved.", route('tasks.show', $task->id));
         }
 
         return redirect()->route('tasks.show', $task)->with('success', 'Collaboration approved successfully.');
@@ -621,9 +627,23 @@ class TaskController extends Controller
 
         $managers = \App\Models\User::whereIn('role', ['super_admin', 'manager'])->get();
         foreach ($managers as $manager) {
-            $this->createNotification($manager, 'Time Revision Request', "A time revision request has been submitted for task '{$task->title}'.");
+            $this->createNotification($manager, 'Time Revision Request', "A time revision request has been submitted for task '{$task->title}'.", route('requests.index'));
         }
 
         return redirect()->route('tasks.show', $task)->with('success', 'Time revision request submitted successfully.');
+    }
+
+    public function getTaskDetails(string $id)
+    {
+        $task = Task::with(['creator', 'assignedUser', 'collaborators', 'files', 'history.user', 'timeRevisionRequests'])->findOrFail($id);
+        $user = auth()->user();
+
+        if (! $this->canAccessTask($task, $user)) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $html = view('tasks.partials.details', compact('task'))->render();
+
+        return response()->json(['html' => $html]);
     }
 }

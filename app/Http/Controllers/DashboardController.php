@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\User;
+use App\Models\TaskCollaborator;
+use App\Models\TimeRevisionRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -63,11 +66,26 @@ class DashboardController extends Controller
 
         $tasksByStatus = [
             'new' => Task::where('status', 'new')->where('approval_status', 'approved')->count(),
+            'pending' => Task::where('approval_status', 'pending')->count(),
             'ongoing' => Task::where('status', 'ongoing')->where('approval_status', 'approved')->count(),
             'completed' => Task::where('status', 'completed')->where('approval_status', 'approved')->count(),
+            'rejected' => Task::where('status', 'rejected')->count(),
         ];
 
-        return view('dashboard.manager', compact('user', 'stats', 'taskCompletionRate', 'tasksByStatus'));
+        $actionCenter = [
+            'collaboration_requests_pending' => TaskCollaborator::where('invitation_status', 'pending')->count(),
+            'time_revision_requests_pending' => TimeRevisionRequest::where('status', 'pending')->count(),
+            'tasks_due_today' => Task::whereDate('due_date', Carbon::today())
+                ->where('approval_status', 'approved')
+                ->where('status', '!=', 'completed')
+                ->count(),
+            'overdue_tasks' => Task::where('due_date', '<', Carbon::today())
+                ->where('approval_status', 'approved')
+                ->where('status', '!=', 'completed')
+                ->count(),
+        ];
+
+        return view('dashboard.manager', compact('user', 'stats', 'taskCompletionRate', 'tasksByStatus', 'actionCenter'));
     }
 
     private function userDashboard($user)

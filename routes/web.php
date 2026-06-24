@@ -46,6 +46,8 @@ Route::middleware(['auth', 'active.account'])->group(function () {
             Route::post('/collaborations/{task}/reject', [RequestController::class, 'rejectCollaboration'])->name('reject-collaboration');
             Route::post('/time-revisions/{id}/approve', [RequestController::class, 'approveTimeRevision'])->name('approve-time-revision');
             Route::post('/time-revisions/{id}/reject', [RequestController::class, 'rejectTimeRevision'])->name('reject-time-revision');
+            Route::get('/collaboration/{id}/details', [RequestController::class, 'getCollaborationDetails'])->name('collaboration-details');
+            Route::get('/time-revision/{id}/details', [RequestController::class, 'getTimeRevisionDetails'])->name('time-revision-details');
         });
     });
 
@@ -56,6 +58,7 @@ Route::middleware(['auth', 'active.account'])->group(function () {
     Route::post('/tasks/{task}/accept-invitation', [TaskController::class, 'acceptInvitation'])->name('tasks.accept-invitation');
     Route::post('/tasks/{task}/reject-invitation', [TaskController::class, 'rejectInvitation'])->name('tasks.reject-invitation');
     Route::post('/tasks/{task}/time-revision', [TaskController::class, 'requestTimeRevision'])->name('tasks.time-revision');
+    Route::get('/tasks/{task}/details', [TaskController::class, 'getTaskDetails'])->name('tasks.details');
 
     Route::prefix('notifications')->name('notifications.')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');

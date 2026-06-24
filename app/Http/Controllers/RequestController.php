@@ -30,7 +30,21 @@ class RequestController extends Controller
             ->latest()
             ->get();
 
-        return view('requests.index', compact('collaborationRequests', 'timeRevisionRequests'));
+        // Summary data for collaboration requests
+        $collaborationSummary = [
+            'pending' => TaskCollaborator::where('invitation_status', 'pending')->count(),
+            'approved' => TaskCollaborator::where('invitation_status', 'accepted')->count(),
+            'rejected' => TaskCollaborator::where('invitation_status', 'rejected')->count(),
+        ];
+
+        // Summary data for time revision requests
+        $timeRevisionSummary = [
+            'pending' => TimeRevisionRequest::where('status', 'pending')->count(),
+            'approved' => TimeRevisionRequest::where('status', 'approved')->count(),
+            'rejected' => TimeRevisionRequest::where('status', 'rejected')->count(),
+        ];
+
+        return view('requests.index', compact('collaborationRequests', 'timeRevisionRequests', 'collaborationSummary', 'timeRevisionSummary'));
     }
 
     public function approveCollaboration(Request $request, $taskId)
@@ -65,7 +79,7 @@ class RequestController extends Controller
         $collaboratorUser = \App\Models\User::find($data['user_id']);
 
         if ($collaboratorUser) {
-            $this->createNotification($collaboratorUser, 'Collaboration Approved', "Your request to collaborate on '{$task->title}' has been approved.");
+            $this->createNotification($collaboratorUser, 'Collaboration Approved', "Your request to collaborate on '{$task->title}' has been approved.", route('tasks.show', $task->id));
         }
 
         return redirect()->route('requests.index')->with('success', 'Collaboration approved successfully.');
@@ -159,18 +173,37 @@ class RequestController extends Controller
             'user_id' => $user->id,
         ]);
 
-        $this->createNotification($revisionRequest->user, 'Time Revision Rejected', "Your time revision request for task '{$task->title}' has been rejected.");
+        $this->createNotification($revisionRequest->user, 'Time Revision Rejected', "Your time revision request for task '{$task->title}' has been rejected.", route('tasks.show', $task->id));
 
         return redirect()->route('requests.index')->with('success', 'Time revision rejected successfully.');
     }
 
-    protected function createNotification($user, $title, $message)
+    protected function createNotification($user, $title, $message, $link = null)
     {
         TaskNotification::create([
             'user_id' => $user->id,
             'title' => $title,
             'message' => $message,
+            'link' => $link,
             'is_read' => false,
         ]);
+    }
+
+    public function getCollaborationDetails($id)
+    {
+        $request = TaskCollaborator::with(['task.creator', 'user'])->findOrFail($id);
+        
+        $html = view('requests.partials.collaboration-details', compact('request'))->render();
+        
+        return response()->json(['html' => $html]);
+    }
+
+    public function getTimeRevisionDetails($id)
+    {
+        $request = TimeRevisionRequest::with(['task', 'user'])->findOrFail($id);
+        
+        $html = view('requests.partials.time-revision-details', compact('request'))->render();
+        
+        return response()->json(['html' => $html]);
     }
 }

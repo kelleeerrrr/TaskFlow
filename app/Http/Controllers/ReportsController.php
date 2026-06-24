@@ -44,7 +44,27 @@ class ReportsController extends Controller
                 : 0,
         ];
 
-        return view('reports.index', compact('taskSummary', 'userPerformance', 'teamProductivity'));
+        // Monthly trends data for the last 5 months
+        $monthlyTrends = [
+            'created' => [0, 0, 0, 0, 0],
+            'completed' => [0, 0, 0, 0, 0],
+        ];
+
+        for ($i = 4; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $monthIndex = 4 - $i;
+            
+            $monthlyTrends['created'][$monthIndex] = Task::whereYear('created_at', $month->year)
+                ->whereMonth('created_at', $month->month)
+                ->count();
+            
+            $monthlyTrends['completed'][$monthIndex] = Task::whereYear('created_at', $month->year)
+                ->whereMonth('created_at', $month->month)
+                ->where('status', 'completed')
+                ->count();
+        }
+
+        return view('reports.index', compact('taskSummary', 'userPerformance', 'teamProductivity', 'monthlyTrends'));
     }
 
     public function detectLate()

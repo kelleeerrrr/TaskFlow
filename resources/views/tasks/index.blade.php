@@ -22,33 +22,44 @@
             <!-- Filters -->
             <div class="bg-white rounded-xl shadow-lg p-4 mb-6 border border-gray-200">
                 <form method="GET" action="{{ route('tasks.index') }}" id="taskFilterForm">
-                    <div class="flex flex-col md:flex-row gap-4">
-                        <div class="flex-1 relative">
-                            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                            <input name="search" type="text" value="{{ request('search') }}" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                        </div>
-                        @if(!auth()->user()->isManager())
-                            <select name="assigned" onchange="document.getElementById('taskFilterForm').submit()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                                <option value="">All Tasks</option>
-                                <option value="me" {{ request('assigned') === 'me' ? 'selected' : '' }}>Assigned to me</option>
-                            </select>
-                        @endif
-                        <select name="status" onchange="document.getElementById('taskFilterForm').submit()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                            <option value="">All Status</option>
-                            <option value="new" {{ request('status') === 'new' ? 'selected' : '' }}>New</option>
-                            <option value="ongoing" {{ request('status') === 'ongoing' ? 'selected' : '' }}>Ongoing</option>
-                            <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
-                            <option value="late" {{ request('status') === 'late' ? 'selected' : '' }}>Late</option>
-                            @if(!auth()->user()->isManager())
-                                <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending Approval</option>
-                                <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select name="status" onchange="document.getElementById('taskFilterForm').submit()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                <option value="">All</option>
+                                <option value="new" {{ request('status') === 'new' ? 'selected' : '' }}>New</option>
+                                <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
+                                <option value="ongoing" {{ request('status') === 'ongoing' ? 'selected' : '' }}>Ongoing</option>
+                                <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
                                 <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejected</option>
-                            @endif
-                        </select>
-                        <button type="submit" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">Apply</button>
-                        <a href="{{ route('tasks.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Reset</a>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                            <select name="priority" onchange="document.getElementById('taskFilterForm').submit()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                <option value="">All</option>
+                                <option value="high" {{ request('priority') === 'high' ? 'selected' : '' }}>High</option>
+                                <option value="medium" {{ request('priority') === 'medium' ? 'selected' : '' }}>Medium</option>
+                                <option value="low" {{ request('priority') === 'low' ? 'selected' : '' }}>Low</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">User</label>
+                            <select name="assigned_to" onchange="document.getElementById('taskFilterForm').submit()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                <option value="">All</option>
+                                @foreach(\App\Models\User::where('role', 'user')->get() as $user)
+                                    <option value="{{ $user->id }}" {{ request('assigned_to') == $user->id ? 'selected' : '' }}>{{ $user->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <input type="date" name="due_date" value="{{ request('due_date') }}" onchange="document.getElementById('taskFilterForm').submit()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                            <input name="search" type="text" value="{{ request('search') }}" placeholder="Search Task" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                        </div>
                     </div>
                 </form>
             </div>
@@ -76,11 +87,12 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deadline</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @foreach($tasks as $task)
-                                <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location.href='{{ route('tasks.show', $task) }}'">
+                                <tr class="hover:bg-gray-50">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center">
                                             <svg class="h-5 w-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,30 +100,19 @@
                                             </svg>
                                             <div>
                                                 <div class="text-sm font-medium text-gray-900">{{ $task->title }}</div>
-                                                <div class="text-sm text-gray-500">{{ Str::limit($task->description, 50) }}...</div>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-900">
                                         @if($task->assignedUser)
                                             <p>{{ $task->assignedUser->name }}</p>
-                                        @endif
-                                        @if($task->collaborators->isNotEmpty())
-                                            <div class="space-y-1 mt-1">
-                                                @foreach($task->collaborators as $collaborator)
-                                                    @if(!$task->assignedUser || $collaborator->id !== $task->assignedUser->id)
-                                                        <p>{{ $collaborator->name }}</p>
-                                                    @endif
-                                                @endforeach
-                                            </div>
-                                        @endif
-                                        @if(!$task->assignedUser && $task->collaborators->isEmpty())
+                                        @else
                                             <p>Unassigned</p>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4">
                                         @php
-                                            $approvalStatusLabel = $task->approval_status === 'pending' ? 'Pending Approval' : ucfirst($task->status);
+                                            $approvalStatusLabel = $task->approval_status === 'pending' ? 'Pending' : ucfirst($task->status);
                                             $approvalStatusClasses = $task->approval_status === 'pending'
                                                 ? 'bg-purple-100 text-purple-700'
                                                 : ($task->status === 'completed' ? 'bg-green-100 text-green-700'
@@ -133,12 +134,12 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-900">
-                                        <div class="flex items-center">
-                                            <svg class="h-4 w-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            {{ $task->due_date }}
-                                        </div>
+                                        {{ $task->due_date }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <button onclick="openTaskDetailsModal({{ $task->id }})" class="text-orange-600 hover:text-orange-800 font-medium text-sm">
+                                            View
+                                        </button>
                                     </td>
                                 </tr>
                             @endforeach
@@ -150,64 +151,113 @@
         </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Create Task Modal -->
     <div id="taskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
-            <h2 class="text-xl font-semibold mb-4">Create New Task</h2>
-            <form action="{{ route('tasks.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+        <div class="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-xl font-semibold mb-6">Create Task</h2>
+            <form action="{{ route('tasks.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                    <input type="text" name="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea name="description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" rows="3"></textarea>
-                </div>
-                @if(auth()->user()->isSuperAdmin() || auth()->user()->isManager())
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
-                        <select name="assigned_to[]" multiple class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                            @foreach(\App\Models\User::where('role', 'user')->get() as $user)
-                                <option value="{{ $user->id }}">{{ $user->name }}</option>
-                            @endforeach
-                        </select>
-                        <p class="mt-2 text-sm text-gray-500">Hold Ctrl (Windows) / Cmd (Mac) to select multiple users.</p>
-                    </div>
-                @endif
-                <div class="grid gap-4 md:grid-cols-2">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                        <input type="date" name="due_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Due Time</label>
-                        <input type="time" name="due_time" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required>
+                
+                <!-- Basic Information -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">Basic Information</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Task Title</label>
+                            <input type="text" name="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <textarea name="description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" rows="3"></textarea>
+                        </div>
                     </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                    <select name="priority" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                    </select>
+
+                <!-- Assignment -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">Assignment</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+                            <select name="assigned_to" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                <option value="">Select User</option>
+                                @foreach(\App\Models\User::where('role', 'user')->get() as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Collaborators</label>
+                            <select name="collaborators[]" multiple class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                @foreach(\App\Models\User::where('role', 'user')->get() as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">PDF Attachment</label>
-                    <input type="file" name="attachment" accept="application/pdf" class="w-full text-sm text-gray-700" />
-                    <p class="text-sm text-gray-500 mt-1">Only PDF files, up to 50 MB.</p>
+
+                <!-- Scheduling -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">Scheduling</h3>
+                    <div class="grid gap-4 md:grid-cols-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                            <input type="date" name="due_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Due Time</label>
+                            <input type="time" name="due_time" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                            <select name="priority" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Attachment -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">Attachment</h3>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Upload PDF</label>
+                        <input type="file" name="attachment" accept="application/pdf" class="w-full text-sm text-gray-700" />
+                        <p class="text-sm text-gray-500 mt-1">(Max 50 MB)</p>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
                 <div class="flex gap-3 pt-4">
                     <button type="button" onclick="document.getElementById('taskModal').classList.add('hidden')" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                         Cancel
                     </button>
                     <button type="submit" class="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-                        Create
+                        Create Task
                     </button>
                 </div>
             </form>
         </div>
+    </div>
+
+    <!-- Task Details Modal -->
+    <div id="taskDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Task Details</h2>
+                <button onclick="document.getElementById('taskDetailsModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div id="taskDetailsContent">
+                <!-- Content will be loaded via JavaScript -->
+            </div>
         </div>
     </div>
 
@@ -235,5 +285,22 @@
 
     function closeDeleteModal() {
         document.getElementById('deleteTaskModal').classList.add('hidden');
+    }
+
+    function openTaskDetailsModal(taskId) {
+        const modal = document.getElementById('taskDetailsModal');
+        const content = document.getElementById('taskDetailsContent');
+        
+        content.innerHTML = '<div class="text-center py-8"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div></div>';
+        modal.classList.remove('hidden');
+        
+        fetch(`/tasks/${taskId}/details`)
+            .then(response => response.json())
+            .then(data => {
+                content.innerHTML = data.html;
+            })
+            .catch(error => {
+                content.innerHTML = '<div class="text-center py-8 text-red-600">Error loading task details</div>';
+            });
     }
 </script>
