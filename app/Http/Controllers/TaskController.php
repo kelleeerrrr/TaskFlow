@@ -126,6 +126,11 @@ class TaskController extends Controller
         $assignedUserId = $data['assigned_to'] ?? null;
         $collaboratorIds = $data['collaborators'] ?? [];
 
+        // Auto-assign task to user if they are a regular user
+        if ($user->isUser()) {
+            $assignedUserId = $user->id;
+        }
+
         $task = Task::create([
             'title' => $data['title'],
             'description' => $data['description'],
@@ -446,10 +451,12 @@ class TaskController extends Controller
         $task = Task::findOrFail($id);
         $user = auth()->user();
 
-        if (! ($user->isSuperAdmin() || $user->isManager() || $task->created_by === $user->id)) {
+        if (! ($user->isSuperAdmin() || $user->isManager() || $task->created_by === $user->id || $task->assigned_to === $user->id)) {
             abort(Response::HTTP_FORBIDDEN);
         }
-
+        if ($task->status === 'rejected' || $task->approval_status === 'rejected') {
+            abort(Response::HTTP_FORBIDDEN);
+        }
         $data = $request->validate([
             'user_id' => 'required|exists:users,id',
         ]);

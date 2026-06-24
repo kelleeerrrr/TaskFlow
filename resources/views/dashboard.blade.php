@@ -54,13 +54,18 @@
                                         <p class="font-medium text-gray-800">{{ $task->title }}</p>
                                         <p class="text-sm text-gray-500">Due: {{ $task->due_date }} {{ $task->due_time }}</p>
                                     </div>
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium
-                                        {{ $task->status === 'completed' ? 'bg-green-100 text-green-700' :
-                                        ($task->status === 'ongoing' ? 'bg-blue-100 text-blue-700' :
-                                        ($task->status === 'new' ? 'bg-yellow-100 text-yellow-700' :
-                                        'bg-red-100 text-red-700')) }}">
-                                        {{ ucfirst($task->status) }}
-                                    </span>
+                                    <div class="flex items-center gap-3">
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                                            {{ $task->status === 'completed' ? 'bg-green-100 text-green-700' :
+                                            ($task->status === 'ongoing' ? 'bg-blue-100 text-blue-700' :
+                                            ($task->status === 'new' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-red-100 text-red-700')) }}">
+                                            {{ ucfirst($task->status) }}
+                                        </span>
+                                        <a href="{{ route('tasks.show', $task) }}" class="text-orange-600 hover:text-orange-800 font-medium text-sm">
+                                            View
+                                        </a>
+                                    </div>
                                 </div>
                             @endforeach
                         </div>

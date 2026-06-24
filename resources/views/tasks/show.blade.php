@@ -5,6 +5,12 @@
 
     <div class="py-12">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+            <div class="mb-6">
+                <a href="{{ route('tasks.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-900">
+                    &larr; Back to tasks
+                </a>
+            </div>
+
             @if($task->approval_status === 'approved' && $task->status === 'new' && auth()->user()->isUser())
                 @php
                     $canStartTask = $task->assigned_to === auth()->id()
@@ -118,35 +124,18 @@
                     </div>
                 @endif
 
-                @if($task->approval_status === 'approved' && $task->status === 'new' && (auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->assigned_to === auth()->id()))
+                @if(($task->status !== 'rejected' && $task->approval_status !== 'rejected') && (auth()->user()->isSuperAdmin() || auth()->user()->isManager() || auth()->id() === $task->created_by || auth()->id() === $task->assigned_to))
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                        <h3 class="font-semibold">Start Task</h3>
-                        <p class="mt-2 text-sm text-gray-600">Change status from New to Ongoing to begin working on this task.</p>
-                        <form action="{{ route('tasks.update', $task) }}" method="POST" class="mt-4">
+                        <h3 class="font-semibold mb-3">Invite Collaborator</h3>
+                        <form action="{{ route('tasks.invite', $task) }}" method="POST">
                             @csrf
-                            @method('PUT')
-                            <input type="hidden" name="status" value="ongoing">
-                            <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-blue-500 border border-transparent rounded-lg text-white hover:bg-blue-600 transition-all">Start Task</button>
-                        </form>
-                    </div>
-                @endif
-
-                @if($task->approval_status === 'approved' && $task->status === 'ongoing' && (auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->assigned_to === auth()->id()))
-                    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                        <h3 class="font-semibold">Complete Task</h3>
-                        <p class="mt-2 text-sm text-gray-600">Upload a PDF file (max 50MB) to mark this task as completed.</p>
-                        <form action="{{ route('tasks.update', $task) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
-                            @csrf
-                            @method('PUT')
-                            <input type="hidden" name="status" value="completed">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">PDF Attachment (Required)</label>
-                                <input type="file" name="attachment" accept="application/pdf" class="w-full text-sm text-gray-700" required />
-                                <p class="text-sm text-gray-500 mt-1">Upload a PDF up to 50 MB to complete the task.</p>
-                            </div>
-                            <div class="flex justify-end">
-                                <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-green-500 border border-transparent rounded-lg text-white hover:bg-green-600 transition-all">Complete Task</button>
-                            </div>
+                            <select name="user_id" required class="block w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                                <option value="">Select a user</option>
+                                @foreach(\App\Models\User::where('id', '!=', auth()->id())->where('role', 'user')->get() as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
+                                @endforeach
+                            </select>
+                            <button type="submit" class="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-orange-500 hover:bg-orange-600 shadow-md transition-all">Invite</button>
                         </form>
                     </div>
                 @endif
@@ -177,31 +166,24 @@
                     </div>
                 @endif
 
-                @if(auth()->user()->isUser() && $task->approval_status === 'approved' && $task->status === 'ongoing')
-                    @php
-                        $canCompleteTask = $task->assigned_to === auth()->id()
-                            || $task->created_by === auth()->id()
-                            || $task->collaborators()->where('user_id', auth()->id())->where('invitation_status', 'accepted')->exists();
-                    @endphp
-                    @if($canCompleteTask)
-                        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                            <h3 class="font-semibold mb-3">Complete Task</h3>
-                            <p class="mt-2 text-sm text-gray-600">Upload a PDF file (max 50MB) to mark this task as completed.</p>
-                            <form action="{{ route('tasks.update', $task) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
-                                @csrf
-                                @method('PUT')
-                                <input type="hidden" name="status" value="completed">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">PDF Attachment (Required)</label>
-                                    <input type="file" name="attachment" accept="application/pdf" class="w-full text-sm text-gray-700" required />
-                                    <p class="text-sm text-gray-500 mt-1">Upload a PDF up to 50 MB to complete the task.</p>
-                                </div>
-                                <div class="flex justify-end">
-                                    <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-green-500 border border-transparent rounded-lg text-white hover:bg-green-600 transition-all">Complete Task</button>
-                                </div>
-                            </form>
-                        </div>
-                    @endif
+                @if($task->approval_status === 'approved' && $task->status === 'ongoing' && $task->assigned_to === auth()->id())
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <h3 class="font-semibold">Complete Task</h3>
+                        <p class="mt-2 text-sm text-gray-600">Upload a PDF file (max 50MB) to mark this task as completed.</p>
+                        <form action="{{ route('tasks.update', $task) }}" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="status" value="completed">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">PDF Attachment (Required)</label>
+                                <input type="file" name="attachment" accept="application/pdf" class="w-full text-sm text-gray-700" required />
+                                <p class="text-sm text-gray-500 mt-1">Upload a PDF up to 50 MB to complete the task.</p>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="inline-flex items-center px-5 py-2.5 bg-green-500 border border-transparent rounded-lg text-white hover:bg-green-600 transition-all">Complete Task</button>
+                            </div>
+                        </form>
+                    </div>
                 @endif
 
                 @if($task->history->isNotEmpty())
@@ -221,22 +203,6 @@
                     </div>
                 @endif
 
-                @if(auth()->user()->isSuperAdmin() || auth()->user()->isManager() || auth()->id() === $task->created_by)
-                    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                        <h3 class="font-semibold mb-3">Invite Collaborator</h3>
-                        <form action="{{ route('tasks.invite', $task) }}" method="POST">
-                            @csrf
-                            <select name="user_id" required class="block w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-orange-500 focus:ring-orange-500">
-                                <option value="">Select a user</option>
-                                @foreach(\App\Models\User::where('id', '!=', auth()->id())->where('role', 'user')->get() as $user)
-                                    <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
-                                @endforeach
-                            </select>
-                            <button type="submit" class="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-orange-500 hover:bg-orange-600 shadow-md transition-all">Invite</button>
-                        </form>
-                    </div>
-                @endif
-
                 @if((auth()->user()->isSuperAdmin() || auth()->user()->isManager()) && $task->approval_status === 'pending')
                     <div class="flex gap-4">
                         <form action="{{ route('tasks.approve', $task) }}" method="POST">
@@ -249,9 +215,6 @@
                         </form>
                     </div>
                 @endif
-
-                <div class="flex items-center gap-4">
-                    <a href="{{ route('tasks.index') }}" class="text-gray-600 hover:text-gray-900">Back to tasks</a>
                     @if(!auth()->user()->isUser() && (auth()->id() === $task->created_by || auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->collaborators()->where('user_id', auth()->id())->where('invitation_status', 'accepted')->exists()))
                         <a href="{{ route('tasks.edit', $task) }}" class="inline-flex items-center px-5 py-2.5 bg-orange-500 border border-transparent rounded-lg text-white hover:bg-orange-600 shadow-md hover:shadow-lg transition-all">Edit Task</a>
                     @endif
