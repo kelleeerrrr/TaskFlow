@@ -16,7 +16,7 @@ class RequestController extends Controller
     {
         $user = auth()->user();
 
-        if (! $user->isManager()) {
+        if (! ($user->isManager() || $user->isSuperAdmin())) {
             abort(Response::HTTP_FORBIDDEN);
         }
 
@@ -51,7 +51,7 @@ class RequestController extends Controller
     {
         $user = auth()->user();
 
-        if (! $user->isManager()) {
+        if (! ($user->isManager() || $user->isSuperAdmin())) {
             abort(Response::HTTP_FORBIDDEN);
         }
 
@@ -89,7 +89,7 @@ class RequestController extends Controller
     {
         $user = auth()->user();
 
-        if (! $user->isManager()) {
+        if (! ($user->isManager() || $user->isSuperAdmin())) {
             abort(Response::HTTP_FORBIDDEN);
         }
 

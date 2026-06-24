@@ -39,7 +39,7 @@ Route::middleware(['auth', 'active.account'])->group(function () {
         Route::get('/collaborations', [TaskController::class, 'collaborationRequests'])->name('collaborations.index');
     });
 
-    Route::middleware('role:manager')->group(function () {
+    Route::middleware('role:manager|super_admin')->group(function () {
         Route::prefix('requests')->name('requests.')->group(function () {
             Route::get('/', [RequestController::class, 'index'])->name('index');
             Route::post('/collaborations/{task}/approve', [RequestController::class, 'approveCollaboration'])->name('approve-collaboration');

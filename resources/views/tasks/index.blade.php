@@ -154,7 +154,14 @@
     <!-- Create Task Modal -->
     <div id="taskModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 class="text-xl font-semibold mb-6">Create Task</h2>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Create Task</h2>
+                <button onclick="closeTaskModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
             <form action="{{ route('tasks.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 
@@ -177,15 +184,17 @@
                 <div class="mb-6">
                     <h3 class="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b">Assignment</h3>
                     <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
-                            <select name="assigned_to" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                                <option value="">Select User</option>
-                                @foreach(\App\Models\User::where('role', 'user')->get() as $user)
-                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                        @if(auth()->user()->isManager() || auth()->user()->isSuperAdmin())
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+                                <select name="assigned_to" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                                    <option value="">Select User</option>
+                                    @foreach(\App\Models\User::where('role', 'user')->get() as $user)
+                                        <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Collaborators</label>
                             <select name="collaborators[]" multiple class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
@@ -277,6 +286,14 @@
     </div>
 </x-app-layout>
 <script>
+    function openTaskModal() {
+        document.getElementById('taskModal').classList.remove('hidden');
+    }
+
+    function closeTaskModal() {
+        document.getElementById('taskModal').classList.add('hidden');
+    }
+
     function openDeleteModal(actionUrl) {
         const modal = document.getElementById('deleteTaskModal');
         document.getElementById('deleteTaskForm').action = actionUrl;
