@@ -6,6 +6,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RequestController;
+use App\Http\Controllers\ManagerController;
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Controllers\ProfileController;
@@ -25,6 +27,11 @@ Route::middleware(['auth', 'active.account'])->group(function () {
         Route::resource('users', UserController::class);
         Route::post('/users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
         Route::post('/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
+        
+        Route::resource('managers', ManagerController::class)->only(['index', 'show']);
+        Route::prefix('activity-logs')->name('activity-logs.')->group(function () {
+            Route::get('/', [ActivityLogController::class, 'index'])->name('index');
+        });
     });
 
     Route::middleware('role:super_admin|manager')->group(function () {

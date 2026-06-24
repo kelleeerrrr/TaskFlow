@@ -27,24 +27,83 @@ class DashboardController extends Controller
 
     private function superAdminDashboard($user)
     {
+        // Summary Cards
         $stats = [
-            'total_users' => User::count(),
-            'active_users' => User::where('status', 'active')->count(),
-            'inactive_users' => User::where('status', 'inactive')->count(),
+            'total_users' => User::where('role', 'user')->count(),
+            'total_managers' => User::where('role', 'manager')->count(),
+            'active_users' => User::where('status', 'active')->where('role', 'user')->count(),
+            'inactive_users' => User::where('status', 'inactive')->where('role', 'user')->count(),
             'total_tasks' => Task::count(),
+            'completed_tasks' => Task::where('status', 'completed')->count(),
+            'pending_tasks' => Task::where('status', 'pending')->count(),
+            'overdue_tasks' => Task::where('due_date', '<', now())->where('status', '!=', 'completed')->count(),
         ];
 
-        $tasksPerMonth = Task::selectRaw("to_char(created_at, 'YYYY-MM') as month, COUNT(*) as count")
-            ->groupBy('month')
-            ->orderBy('month')
+        // User Activity Analytics
+        $userGrowthTrend = User::selectRaw("DATE(created_at) as date, COUNT(*) as count")
+            ->where('role', 'user')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->groupBy('date')
+            ->orderBy('date')
             ->get();
 
-        $userRegistrations = User::selectRaw("to_char(created_at, 'YYYY-MM') as month, COUNT(*) as count")
-            ->groupBy('month')
-            ->orderBy('month')
+        $activeUsersTrend = User::selectRaw("DATE(created_at) as date, COUNT(*) as count")
+            ->where('status', 'active')
+            ->where('role', 'user')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->groupBy('date')
+            ->orderBy('date')
             ->get();
 
-        return view('dashboard.super-admin', compact('user', 'stats', 'tasksPerMonth', 'userRegistrations'));
+        // Task Analytics
+        $taskDistribution = [
+            'completed' => Task::where('status', 'completed')->count(),
+            'ongoing' => Task::where('status', 'ongoing')->count(),
+            'pending' => Task::where('status', 'pending')->orWhere('approval_status', 'pending')->count(),
+            'overdue' => Task::where('due_date', '<', now())->where('status', '!=', 'completed')->count(),
+        ];
+
+        // Manager Overview
+        $managers = User::where('role', 'manager')->withCount(['tasks' => function($query) {
+            $query->where('status', 'completed');
+        }])->get()->map(function($manager) {
+            $totalTasks = Task::where('assigned_to', $manager->id)->count();
+            $completedTasks = Task::where('assigned_to', $manager->id)->where('status', 'completed')->count();
+            $teamSize = User::where('role', 'user')->count(); // Simplified team size
+            
+            return [
+                'name' => $manager->name,
+                'email' => $manager->email,
+                'team_size' => $teamSize,
+                'total_tasks' => $totalTasks,
+                'completion_rate' => $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 1) : 0,
+                'status' => $manager->status,
+            ];
+        });
+
+        // Recent Activity
+        $recentActivities = \App\Models\TaskHistory::with('user')
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get()
+            ->map(function($activity) {
+                return [
+                    'user' => $activity->user ? $activity->user->name : 'System',
+                    'action' => $activity->action,
+                    'date' => $activity->created_at->format('M d, Y'),
+                    'time' => $activity->created_at->format('g:i A'),
+                ];
+            });
+
+        return view('dashboard.super-admin', compact(
+            'user',
+            'stats',
+            'userGrowthTrend',
+            'activeUsersTrend',
+            'taskDistribution',
+            'managers',
+            'recentActivities'
+        ));
     }
 
     private function managerDashboard($user)

@@ -13,10 +13,9 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $roleFilter = $request->query('role');
         $statusFilter = $request->query('status');
         $search = $request->query('search');
-        $query = User::latest();
+        $query = User::where('role', 'user')->latest();
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -29,13 +28,9 @@ class UserController extends Controller
             $query->where('status', $statusFilter);
         }
 
-        if ($roleFilter && in_array($roleFilter, ['manager', 'user'])) {
-            $query->where('role', $roleFilter);
-        }
-
         $users = $query->paginate(15);
 
-        return view('users.index', compact('users', 'roleFilter', 'statusFilter'));
+        return view('users.index', compact('users', 'statusFilter'));
     }
 
     public function create()
@@ -72,16 +67,17 @@ class UserController extends Controller
     {
         $this->authorize('view', $user);
 
-        $tasks = Task::where('created_by', $user->id)
-            ->orWhere('assigned_to', $user->id)
-            ->orWhereHas('collaborators', function ($q) use ($user) {
-                $q->where('user_id', $user->id)->where('invitation_status', 'accepted');
-            })
+        $totalTasks = \App\Models\Task::where('assigned_to', $user->id)->count();
+        $completedTasks = \App\Models\Task::where('assigned_to', $user->id)->where('status', 'completed')->count();
+        $pendingTasks = \App\Models\Task::where('assigned_to', $user->id)->where('status', '!=', 'completed')->count();
+
+        $recentTasks = \App\Models\Task::where('assigned_to', $user->id)
             ->with(['creator', 'assignedUser'])
             ->latest()
+            ->take(10)
             ->get();
 
-        return view('users.show', compact('user', 'tasks'));
+        return view('users.show', compact('user', 'totalTasks', 'completedTasks', 'pendingTasks', 'recentTasks'));
     }
 
     public function edit(User $user)

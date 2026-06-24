@@ -25,26 +25,31 @@
                     <a href="{{ route('dashboard') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('dashboard') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
                         {{ __('Dashboard') }}
                     </a>
-                    <a href="{{ route('tasks.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('tasks.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
-                        {{ __('Tasks') }}
-                    </a>
                     @if(auth()->user()->isSuperAdmin())
                         <a href="{{ route('users.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('users.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
                             {{ __('Users') }}
                         </a>
+                        <a href="{{ route('managers.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('managers.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
+                            {{ __('Managers') }}
+                        </a>
+                        <a href="{{ route('activity-logs.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('activity-logs.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
+                            {{ __('Activity Logs') }}
+                        </a>
                     @endif
-                    @if(auth()->user()->isSuperAdmin() || auth()->user()->isManager())
-                        @if(auth()->user()->isManager())
-                            <a href="{{ route('requests.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('requests.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
-                                {{ __('Requests') }}
-                            </a>
-                        @else
-                            <a href="{{ route('collaborations.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('collaborations.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
-                                {{ __('Collaboration') }}
-                            </a>
-                        @endif
+                    @if(auth()->user()->isManager())
+                        <a href="{{ route('requests.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('requests.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
+                            {{ __('Requests') }}
+                        </a>
                         <a href="{{ route('reports.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('reports.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
                             {{ __('Reports') }}
+                        </a>
+                        <a href="{{ route('tasks.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('tasks.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
+                            {{ __('Tasks') }}
+                        </a>
+                    @endif
+                    @if(auth()->user()->isUser())
+                        <a href="{{ route('tasks.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium {{ request()->routeIs('tasks.*') ? 'border-orange-500 text-black' : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300' }}">
+                            {{ __('Tasks') }}
                         </a>
                     @endif
                 </div>
@@ -132,22 +137,31 @@
             <a href="{{ route('dashboard') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('dashboard') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
                 {{ __('Dashboard') }}
             </a>
-            <a href="{{ route('tasks.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('tasks.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
-                {{ __('Tasks') }}
-            </a>
             @if(auth()->user()->isSuperAdmin())
                 <a href="{{ route('users.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('users.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
                     {{ __('Users') }}
                 </a>
+                <a href="{{ route('managers.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('managers.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
+                    {{ __('Managers') }}
+                </a>
+                <a href="{{ route('activity-logs.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('activity-logs.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
+                    {{ __('Activity Logs') }}
+                </a>
             @endif
-            @if(auth()->user()->isSuperAdmin() || auth()->user()->isManager())
-                @if(auth()->user()->isManager())
-                    <a href="{{ route('requests.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('requests.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
-                        {{ __('Requests') }}
-                    </a>
-                @endif
+            @if(auth()->user()->isManager())
+                <a href="{{ route('requests.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('requests.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
+                    {{ __('Requests') }}
+                </a>
                 <a href="{{ route('reports.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('reports.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
                     {{ __('Reports') }}
+                </a>
+                <a href="{{ route('tasks.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('tasks.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
+                    {{ __('Tasks') }}
+                </a>
+            @endif
+            @if(auth()->user()->isUser())
+                <a href="{{ route('tasks.index') }}" class="block px-4 py-2 text-base font-medium {{ request()->routeIs('tasks.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">
+                    {{ __('Tasks') }}
                 </a>
             @endif
             <a href="{{ route('notifications.index') }}" class="flex items-center justify-between px-4 py-2 text-base font-medium {{ request()->routeIs('notifications.*') ? 'bg-orange-50 text-orange-600 border-l-4 border-orange-500' : 'text-gray-600 hover:bg-gray-50 hover:text-black' }}">

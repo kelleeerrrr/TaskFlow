@@ -1,24 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="text-3xl font-bold text-gray-800">Users</h2>
-            <button onclick="document.getElementById('userModal').classList.remove('hidden')" class="flex items-center gap-2 bg-orange-500 text-white px-5 py-2.5 rounded-lg hover:bg-orange-600 shadow-md hover:shadow-lg transition-all">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
-                </svg>
-                Add User
-            </button>
-        </div>
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Users</h2>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            @if(session('success'))
-                <div class="mb-6 p-4 bg-green-100 text-green-800 rounded-lg">{{ session('success') }}</div>
-            @endif
-
             <!-- Search and Filter -->
-            <div class="bg-white rounded-xl shadow-lg p-4 mb-6 border border-gray-200">
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-6">
                 <form method="GET" action="{{ route('users.index') }}" id="userFilterForm">
                     <div class="flex flex-col md:flex-row gap-4">
                         <div class="flex-1 relative">
@@ -32,81 +20,69 @@
                             <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                             <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                         </select>
-                        <button type="submit" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">Apply</button>
+                        <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">Filter</button>
                         <a href="{{ route('users.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Reset</a>
                     </div>
                 </form>
             </div>
 
             <!-- Users List -->
-            <div class="bg-white rounded-xl shadow-lg border border-gray-200">
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">User Management</h3>
+                    <p class="text-sm text-gray-500 mt-1">Manage and monitor user accounts</p>
+                </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full">
+                    <table class="min-w-full">
                         <thead class="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Profile</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Email</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Task Count</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200">
+                        <tbody class="divide-y divide-gray-100">
                             @foreach($users as $user)
+                                @php
+                                    $taskCount = \App\Models\Task::where('assigned_to', $user->id)->count();
+                                @endphp
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-6 py-4">
-                                        <div class="flex items-center">
-                                            <div class="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-medium mr-3">
-                                                {{ strtoupper(substr($user->name, 0, 1)) }}
-                                            </div>
-                                            <div>
-                                                <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
-                                            </div>
+                                        <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                                            <span class="text-orange-600 font-semibold">{{ substr($user->name, 0, 2) }}</span>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-gray-900">{{ $user->email }}</td>
                                     <td class="px-6 py-4">
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium
-                                            {{ $user->role === 'super_admin' ? 'bg-purple-100 text-purple-700' :
-                                            ($user->role === 'manager' ? 'bg-blue-100 text-blue-700' :
-                                            'bg-gray-100 text-gray-700') }}">
-                                            {{ ucfirst(str_replace('_', ' ', $user->role)) }}
-                                        </span>
+                                        <div class="font-medium text-gray-900">{{ $user->name }}</div>
                                     </td>
+                                    <td class="px-6 py-4 text-gray-600">{{ $user->email }}</td>
+                                    <td class="px-6 py-4 text-gray-600">{{ $taskCount }}</td>
                                     <td class="px-6 py-4">
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium
-                                            {{ $user->status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                            {{ $user->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                             {{ ucfirst($user->status) }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-2">
+                                            <a href="{{ route('users.show', $user) }}" class="text-orange-600 hover:text-orange-800 text-sm font-medium">View</a>
+                                            <a href="{{ route('users.edit', $user) }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</a>
                                             @if($user->id !== auth()->id())
                                                 @if($user->status === 'active')
                                                     <form action="{{ route('users.deactivate', $user) }}" method="POST" class="inline">
                                                         @csrf
-                                                        <button type="submit" class="p-1 text-yellow-600 hover:bg-yellow-50 rounded" title="Deactivate">
-                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
-                                                            </svg>
-                                                        </button>
+                                                        <button type="submit" class="text-yellow-600 hover:text-yellow-800 text-sm font-medium">Deactivate</button>
                                                     </form>
                                                 @else
                                                     <form action="{{ route('users.activate', $user) }}" method="POST" class="inline">
                                                         @csrf
-                                                        <button type="submit" class="p-1 text-green-600 hover:bg-green-50 rounded" title="Activate">
-                                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                                            </svg>
-                                                        </button>
+                                                        <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">Activate</button>
                                                     </form>
                                                 @endif
                                             @endif
-                                            <a href="{{ route('users.edit', $user) }}" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
-                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                </svg>
-                                            </a>
                                         </div>
                                     </td>
                                 </tr>
@@ -114,52 +90,12 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="mt-4 px-6">{{ $users->links() }}</div>
+                @if($users->hasPages())
+                    <div class="p-6 border-t border-gray-200">
+                        {{ $users->links() }}
+                    </div>
+                @endif
             </div>
-        </div>
-    </div>
-
-    <!-- Modal -->
-    <div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
-            <h2 class="text-xl font-semibold mb-4">Add New User</h2>
-            <form action="{{ route('users.store') }}" method="POST" class="space-y-4">
-                @csrf
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <input type="text" name="name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" name="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                    <select name="role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                        <option value="user">User</option>
-                        <option value="manager">Manager</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                    </select>
-                </div>
-                <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="document.getElementById('userModal').classList.add('hidden')" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" class="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-                        Create
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </x-app-layout>
