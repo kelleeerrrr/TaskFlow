@@ -454,7 +454,9 @@ class TaskController extends Controller
         if (! ($user->isSuperAdmin() || $user->isManager() || $task->created_by === $user->id || $task->assigned_to === $user->id)) {
             abort(Response::HTTP_FORBIDDEN);
         }
-
+        if ($task->status === 'rejected' || $task->approval_status === 'rejected') {
+            abort(Response::HTTP_FORBIDDEN);
+        }
         $data = $request->validate([
             'user_id' => 'required|exists:users,id',
         ]);

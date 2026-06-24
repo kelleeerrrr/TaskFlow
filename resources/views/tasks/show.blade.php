@@ -5,6 +5,12 @@
 
     <div class="py-12">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+            <div class="mb-6">
+                <a href="{{ route('tasks.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-900">
+                    &larr; Back to tasks
+                </a>
+            </div>
+
             @if($task->approval_status === 'approved' && $task->status === 'new' && auth()->user()->isUser())
                 @php
                     $canStartTask = $task->assigned_to === auth()->id()
@@ -118,7 +124,7 @@
                     </div>
                 @endif
 
-                @if(auth()->user()->isSuperAdmin() || auth()->user()->isManager() || auth()->id() === $task->created_by || auth()->id() === $task->assigned_to)
+                @if(($task->status !== 'rejected' && $task->approval_status !== 'rejected') && (auth()->user()->isSuperAdmin() || auth()->user()->isManager() || auth()->id() === $task->created_by || auth()->id() === $task->assigned_to))
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <h3 class="font-semibold mb-3">Invite Collaborator</h3>
                         <form action="{{ route('tasks.invite', $task) }}" method="POST">
@@ -209,9 +215,6 @@
                         </form>
                     </div>
                 @endif
-
-                <div class="flex items-center gap-4">
-                    <a href="{{ route('tasks.index') }}" class="text-gray-600 hover:text-gray-900">Back to tasks</a>
                     @if(!auth()->user()->isUser() && (auth()->id() === $task->created_by || auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->collaborators()->where('user_id', auth()->id())->where('invitation_status', 'accepted')->exists()))
                         <a href="{{ route('tasks.edit', $task) }}" class="inline-flex items-center px-5 py-2.5 bg-orange-500 border border-transparent rounded-lg text-white hover:bg-orange-600 shadow-md hover:shadow-lg transition-all">Edit Task</a>
                     @endif

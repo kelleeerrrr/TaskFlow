@@ -149,9 +149,9 @@
                                                 </form>
                                             </div>
                                         @else
-                                            <button onclick="openTaskDetailsModal({{ $task->id }})" class="text-orange-600 hover:text-orange-800 font-medium text-sm">
+                                            <a href="{{ route('tasks.show', $task) }}" class="text-orange-600 hover:text-orange-800 font-medium text-sm">
                                                 View
-                                            </button>
+                                            </a>
                                         @endif
                                     </td>
                                 </tr>
@@ -270,7 +270,7 @@
         <div class="bg-white rounded-xl p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-semibold">Task Details</h2>
-                <button onclick="document.getElementById('taskDetailsModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                <button onclick="closeTaskDetailsModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -320,10 +320,10 @@
     function openTaskDetailsModal(taskId) {
         const modal = document.getElementById('taskDetailsModal');
         const content = document.getElementById('taskDetailsContent');
-        
+
         content.innerHTML = '<div class="text-center py-8"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div></div>';
         modal.classList.remove('hidden');
-        
+
         fetch(`/tasks/${taskId}/details`)
             .then(response => response.json())
             .then(data => {
@@ -332,5 +332,9 @@
             .catch(error => {
                 content.innerHTML = '<div class="text-center py-8 text-red-600">Error loading task details</div>';
             });
+    }
+
+    function closeTaskDetailsModal() {
+        document.getElementById('taskDetailsModal').classList.add('hidden');
     }
 </script>
