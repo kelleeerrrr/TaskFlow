@@ -5,12 +5,15 @@
 
     <div class="py-12">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+            {{-- Back button to return to tasks list --}}
             <div class="mb-6">
                 <a href="{{ route('tasks.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-900">
                     &larr; Back to tasks
                 </a>
             </div>
 
+            {{-- Start Task Banner - Only shown to regular users who can start the task --}}
+            {{-- Condition: Task is approved, status is 'new', user is a regular user, and user has permission (assigned, created, or accepted collaborator) --}}
             @if($task->approval_status === 'approved' && $task->status === 'new' && auth()->user()->isUser())
                 @php
                     $canStartTask = $task->assigned_to === auth()->id()
@@ -33,7 +36,9 @@
                 @endif
             @endif
 
+            {{-- Task Details Card - Displays all task information --}}
             <div class="bg-white shadow-lg rounded-xl p-8 border border-gray-200 space-y-4">
+                {{-- Basic Task Information --}}
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="font-medium">Task ID</p>
@@ -45,11 +50,13 @@
                     </div>
                 </div>
 
+                {{-- Task Description --}}
                 <div>
                     <h3 class="text-lg font-semibold">Description</h3>
                     <p class="mt-2 text-gray-700">{{ $task->description }}</p>
                 </div>
 
+                {{-- Additional Task Information Grid --}}
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="font-medium">Approval</p>
@@ -73,9 +80,11 @@
                     </div>
                     <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <p class="font-medium">Assigned To</p>
+                        {{-- Display assigned user if exists --}}
                         @if($task->assignedUser)
                             <p>{{ $task->assignedUser->name }}</p>
                         @endif
+                        {{-- Display collaborators (excluding assigned user) --}}
                         @if($task->collaborators->isNotEmpty())
                             <div class="space-y-1 mt-1">
                                 @foreach($task->collaborators as $collaborator)
@@ -85,6 +94,7 @@
                                 @endforeach
                             </div>
                         @endif
+                        {{-- Show unassigned if no assigned user or collaborators --}}
                         @if(!$task->assignedUser && $task->collaborators->isEmpty())
                             <p>Unassigned</p>
                         @endif
@@ -99,6 +109,7 @@
                     </div>
                 </div>
 
+                {{-- Attached Files Section - Only shown if task has files --}}
                 @if($task->files->isNotEmpty())
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <h3 class="font-semibold">Files</h3>
@@ -112,6 +123,7 @@
                     </div>
                 @endif
 
+                {{-- Cancel Task Request - Only shown to task creator when task is pending approval --}}
                 @if($task->approval_status === 'pending' && auth()->id() === $task->created_by)
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <h3 class="font-semibold">Cancel Task Request</h3>
@@ -124,6 +136,8 @@
                     </div>
                 @endif
 
+                {{-- Invite Collaborator Section - Available to managers, super admins, task creators, and assigned users --}}
+                {{-- Not shown for rejected tasks or tasks with rejected approval status --}}
                 @if(($task->status !== 'rejected' && $task->approval_status !== 'rejected') && (auth()->user()->isSuperAdmin() || auth()->user()->isManager() || auth()->id() === $task->created_by || auth()->id() === $task->assigned_to))
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <h3 class="font-semibold mb-3">Invite Collaborator</h3>
@@ -131,6 +145,7 @@
                             @csrf
                             <select name="user_id" required class="block w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-orange-500 focus:ring-orange-500">
                                 <option value="">Select a user</option>
+                                {{-- Only show regular users (not admins/managers) as potential collaborators --}}
                                 @foreach(\App\Models\User::where('id', '!=', auth()->id())->where('role', 'user')->get() as $user)
                                     <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
                                 @endforeach
@@ -140,6 +155,7 @@
                     </div>
                 @endif
 
+                {{-- Request Time Revision Section - Only shown to regular users for approved tasks with new or ongoing status --}}
                 @if(auth()->user()->isUser() && $task->approval_status === 'approved' && in_array($task->status, ['new', 'ongoing']))
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <h3 class="font-semibold mb-3">Request Time Revision</h3>
@@ -166,6 +182,7 @@
                     </div>
                 @endif
 
+                {{-- Complete Task Section - Only shown to assigned user for approved ongoing tasks --}}
                 @if($task->approval_status === 'approved' && $task->status === 'ongoing' && $task->assigned_to === auth()->id())
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <h3 class="font-semibold">Complete Task</h3>
@@ -186,6 +203,7 @@
                     </div>
                 @endif
 
+                {{-- Task History Section - Shows all actions taken on the task --}}
                 @if($task->history->isNotEmpty())
                     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <h3 class="font-semibold">Task History</h3>
@@ -203,6 +221,7 @@
                     </div>
                 @endif
 
+                {{-- Approve/Reject Task Buttons - Only shown to managers and super admins for pending tasks --}}
                 @if((auth()->user()->isSuperAdmin() || auth()->user()->isManager()) && $task->approval_status === 'pending')
                     <div class="flex gap-4">
                         <form action="{{ route('tasks.approve', $task) }}" method="POST">
@@ -215,6 +234,8 @@
                         </form>
                     </div>
                 @endif
+
+                {{-- Edit Task Button - Only shown to non-regular users who have permission (creator, admin, manager, or accepted collaborator) --}}
                     @if(!auth()->user()->isUser() && (auth()->id() === $task->created_by || auth()->user()->isSuperAdmin() || auth()->user()->isManager() || $task->collaborators()->where('user_id', auth()->id())->where('invitation_status', 'accepted')->exists()))
                         <a href="{{ route('tasks.edit', $task) }}" class="inline-flex items-center px-5 py-2.5 bg-orange-500 border border-transparent rounded-lg text-white hover:bg-orange-600 shadow-md hover:shadow-lg transition-all">Edit Task</a>
                     @endif
