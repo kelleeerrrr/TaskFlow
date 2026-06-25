@@ -155,7 +155,7 @@ class TaskController extends Controller
 
             $assignedUser = \App\Models\User::find($assignedUserId);
             if ($assignedUser) {
-                $this->createNotification($assignedUser, 'Task Assigned', "You have been assigned to task '{$task->title}'.", route('tasks.show', $task->id));
+                $this->createNotification($assignedUser, 'Pending Task', "Waiting for Manager approval. '{$task->title}'.", route('tasks.show', $task->id));
             }
         }
 
